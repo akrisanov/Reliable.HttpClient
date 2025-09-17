@@ -1,12 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net6.0;net8.0;net9.0</TargetFrameworks>
+    <!-- TargetFrameworks, LangVersion, Nullable, ImplicitUsings inherited from
+    Directory.Build.props -->
     <AssemblyName>Reliable.HttpClient</AssemblyName>
     <PackageId>Reliable.HttpClient</PackageId>
-    <Version>1.0.0</Version>
-    <PackageReleaseNotes>🎉 Stable v1.0.0 Release!
+    <Version>1.1.0</Version>
+    <PackageReleaseNotes>🎉 v1.1.0 Release - Universal Interface!
 
-      ✨ Features:
+      ✨ New Features:
+      • Universal IHttpResponseHandler interface (non-generic) for better extensibility
+      • Improved caching compatibility and DI integration
+      • Enhanced type safety and cleaner API design
+
+      🔄 Previous Features (from v1.0.0):
       • Fluent configuration API with HttpClientOptionsBuilder
       • 6 predefined presets for common scenarios (FastInternalApi, SlowExternalApi, etc.)
       • Retry policies with exponential backoff and jitter
@@ -52,11 +58,5 @@
 
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="/" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
-    <PackageReference Include="ErrorProne.NET.CoreAnalyzers" Version="0.8.2-beta.1"
-      PrivateAssets="All" />
   </ItemGroup>
 </Project>

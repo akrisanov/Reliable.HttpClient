@@ -11,21 +11,16 @@ namespace Reliable.HttpClient.Caching.Providers;
 /// Memory cache provider for HTTP responses
 /// </summary>
 /// <typeparam name="TResponse">Response type</typeparam>
-public class MemoryCacheProvider<TResponse> : IHttpResponseCache<TResponse>
+/// <param name="memoryCache">Memory cache instance</param>
+/// <param name="logger">Logger instance</param>
+public class MemoryCacheProvider<TResponse>(
+    IMemoryCache memoryCache,
+    ILogger<MemoryCacheProvider<TResponse>> logger) : IHttpResponseCache<TResponse>
 {
-    private readonly IMemoryCache _memoryCache;
-    private readonly ILogger<MemoryCacheProvider<TResponse>> _logger;
-    private readonly string _keyPrefix;
-    private readonly ConcurrentBag<string> _cacheKeys = new();
-
-    public MemoryCacheProvider(
-        IMemoryCache memoryCache,
-        ILogger<MemoryCacheProvider<TResponse>> logger)
-    {
-        _memoryCache = memoryCache ?? throw new ArgumentNullException(nameof(memoryCache));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _keyPrefix = $"http_cache_{typeof(TResponse).Name}_";
-    }
+    private readonly IMemoryCache _memoryCache = memoryCache ?? throw new ArgumentNullException(nameof(memoryCache));
+    private readonly ILogger<MemoryCacheProvider<TResponse>> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    private readonly string _keyPrefix = $"http_cache_{typeof(TResponse).Name}_";
+    private readonly ConcurrentBag<string> _cacheKeys = [];
 
     public Task<TResponse?> GetAsync(string key, CancellationToken cancellationToken = default)
     {

@@ -23,21 +23,23 @@ public class HttpCacheOptions
     /// <summary>
     /// HTTP status codes that should be cached (idempotent responses only)
     /// </summary>
-    public HashSet<System.Net.HttpStatusCode> CacheableStatusCodes { get; set; } =
-    [
-        System.Net.HttpStatusCode.OK,             // 200 - Standard success
-        System.Net.HttpStatusCode.NotModified,    // 304 - Not modified
-        System.Net.HttpStatusCode.PartialContent  // 206 - Partial content
-    ];
+    public ISet<System.Net.HttpStatusCode> CacheableStatusCodes { get; set; } =
+        new HashSet<System.Net.HttpStatusCode>
+        {
+            System.Net.HttpStatusCode.OK,              // 200 - Standard success
+            System.Net.HttpStatusCode.NotModified,     // 304 - Not modified
+            System.Net.HttpStatusCode.PartialContent,  // 206 - Partial content
+        };
 
     /// <summary>
     /// HTTP methods that should be cached
     /// </summary>
-    public HashSet<HttpMethod> CacheableMethods { get; set; } = new()
-    {
-        HttpMethod.Get,
-        HttpMethod.Head
-    };
+    public ISet<HttpMethod> CacheableMethods { get; set; } =
+        new HashSet<HttpMethod>
+        {
+            HttpMethod.Get,
+            HttpMethod.Head,
+        };
 
     /// <summary>
     /// Determines if a response should be cached based on the request and response
@@ -46,12 +48,7 @@ public class HttpCacheOptions
         (request, response) =>
         {
             // Check Cache-Control directives
-            if (response.Headers.CacheControl is not null)
-            {
-                if (response.Headers.CacheControl.NoCache || response.Headers.CacheControl.NoStore)
-                    return false;
-            }
-            return true;
+            return response.Headers.CacheControl is not { NoCache: true } and not { NoStore: true };
         };
 
     /// <summary>
@@ -61,16 +58,15 @@ public class HttpCacheOptions
         (request, response) =>
         {
             // Check Cache-Control max-age directive
-            if (response.Headers.CacheControl?.MaxAge is not null)
+            if (response.Headers.CacheControl?.MaxAge is { } maxAge)
             {
-                return response.Headers.CacheControl.MaxAge.Value;
+                return maxAge;
             }
 
             // Check Cache-Control no-cache or no-store directives
-            if (response.Headers.CacheControl is not null)
+            if (response.Headers.CacheControl is { NoCache: true } or { NoStore: true })
             {
-                if (response.Headers.CacheControl.NoCache || response.Headers.CacheControl.NoStore)
-                    return TimeSpan.Zero;
+                return TimeSpan.Zero;
             }
 
             // This will be overridden to use the correct DefaultExpiry by CopyPresetToOptions

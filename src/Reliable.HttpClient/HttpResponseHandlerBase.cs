@@ -33,7 +33,7 @@ public abstract class HttpResponseHandlerBase<TResponse>(ILogger logger) : IHttp
     {
         try
         {
-            return await response.Content.ReadAsStringAsync(cancellationToken);
+            return await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {

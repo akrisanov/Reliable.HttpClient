@@ -16,7 +16,7 @@ public static class CachePresets
         MaxCacheSize = 500,
         ShouldCache = (request, response) =>
             response.IsSuccessStatusCode &&
-            response.Content.Headers.ContentLength < 100_000 // Don't cache large responses
+            response.Content.Headers.ContentLength < 100_000, // Don't cache large responses
     };
 
     /// <summary>
@@ -28,7 +28,7 @@ public static class CachePresets
         MaxCacheSize = 1_000,
         ShouldCache = (request, response) =>
             response.IsSuccessStatusCode &&
-            response.Content.Headers.ContentLength < 500_000
+            response.Content.Headers.ContentLength < 500_000,
     };
 
     /// <summary>
@@ -40,7 +40,7 @@ public static class CachePresets
         MaxCacheSize = 2_000,
         ShouldCache = (request, response) =>
             response.IsSuccessStatusCode &&
-            response.Content.Headers.ContentLength < 1_000_000
+            response.Content.Headers.ContentLength < 1_000_000,
     };
 
     /// <summary>
@@ -52,7 +52,7 @@ public static class CachePresets
         MaxCacheSize = 5_000,
         ShouldCache = (request, response) =>
             response.IsSuccessStatusCode &&
-            response.Content.Headers.ContentLength < 200_000
+            response.Content.Headers.ContentLength < 200_000,
     };
 
     /// <summary>
@@ -63,7 +63,7 @@ public static class CachePresets
         DefaultExpiry = TimeSpan.FromMinutes(30),
         MaxCacheSize = 100,
         ShouldCache = (request, response) =>
-            response.IsSuccessStatusCode // Cache all successful config responses
+            response.IsSuccessStatusCode, // Cache all successful config responses
     };
 
     /// <summary>
@@ -75,7 +75,7 @@ public static class CachePresets
         MaxCacheSize = 50, // Fewer items but potentially larger
         ShouldCache = (request, response) =>
             response.IsSuccessStatusCode &&
-            (response.Content.Headers.ContentType?.MediaType?.StartsWith("application/") == true ||
-             response.Content.Headers.ContentType?.MediaType?.StartsWith("image/") == true)
+            (response.Content.Headers.ContentType?.MediaType?.StartsWith("application/", StringComparison.OrdinalIgnoreCase) == true ||
+             response.Content.Headers.ContentType?.MediaType?.StartsWith("image/", StringComparison.OrdinalIgnoreCase) == true),
     };
 }

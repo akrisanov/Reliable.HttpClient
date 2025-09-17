@@ -26,7 +26,7 @@ public class HttpResponseHandlerBaseTests
         const string expectedContent = "test content";
         using var response = new HttpResponseMessage(HttpStatusCode.OK)
         {
-            Content = new StringContent(expectedContent, Encoding.UTF8, "text/plain")
+            Content = new StringContent(expectedContent, Encoding.UTF8, "text/plain"),
         };
 
         // Act
@@ -172,10 +172,10 @@ public class HttpResponseHandlerBaseTests
         public override async Task<string> HandleAsync(HttpResponseMessage response, CancellationToken cancellationToken = default)
         {
             // Simple implementation for testing - just return content
-            return await ReadResponseContentAsync(response, cancellationToken);
+            return await ReadResponseContentAsync(response, cancellationToken).ConfigureAwait(false);
         }
         public new async Task<string> ReadResponseContentAsync(HttpResponseMessage response, CancellationToken cancellationToken = default)
-            => await base.ReadResponseContentAsync(response, cancellationToken);
+            => await base.ReadResponseContentAsync(response, cancellationToken).ConfigureAwait(false);
 
         public new void LogHttpResponse(HttpResponseMessage response, string? content = null, string serviceName = "ExternalService")
             => base.LogHttpResponse(response, content, serviceName);
