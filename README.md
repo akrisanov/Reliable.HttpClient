@@ -75,12 +75,12 @@ public class ApiClient(HttpClient client)
 
 ## Key Features
 
-✅ **Zero Configuration** - Works out of the box
-✅ **Resilience** - Retry + Circuit breaker
-✅ **Caching** - Intelligent HTTP response caching
-✅ **Universal Handlers** - Non-generic response handling for REST APIs
-✅ **HttpClient Substitution** - Switch between cached/non-cached implementations
-✅ **Production Ready** - Used by companies in production
+- **Zero Configuration** – Works out of the box
+- **Resilience** – Retry + Circuit breaker
+- **Caching** – Intelligent HTTP response caching
+- **Universal Handlers** – Non-generic response handling for REST APIs
+- **HttpClient Substitution** – Switch between cached/non-cached implementations
+- **Production Ready** – Used by companies in production
 
 > 📖 **Full Feature List**: [Documentation](docs/README.md#key-features)
 
