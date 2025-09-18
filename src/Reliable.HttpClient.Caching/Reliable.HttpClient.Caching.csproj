@@ -4,30 +4,46 @@
     Directory.Build.props -->
     <AssemblyName>Reliable.HttpClient.Caching</AssemblyName>
     <PackageId>Reliable.HttpClient.Caching</PackageId>
-    <Version>1.1.0</Version>
-    <PackageReleaseNotes>🚀 v1.1.0 Release - Generic Caching Architecture!
+    <Version>1.2.0</Version>
+    <PackageReleaseNotes>🎉 v1.2.0 Release - Custom Headers Support &amp; Enhanced Caching!
 
-      ✨ New Major Features:
+      ✨ Major New Features:
 
-      • Generic Caching Namespace (Reliable.HttpClient.Caching.Generic)
-      • Type-safe CachedHttpClient&lt;T&gt; for specific response types
-      • Compile-time type safety with improved performance
-      • Separate namespace organization: Generic vs Universal caching approaches
-      • Enhanced extension methods with "Generic" prefixes for clear API distinction
+      • Full custom headers support matching main HttpClient module capabilities
+      • DefaultHeaders property in HttpCacheOptions for static headers across all cached requests
+      • Per-request headers support in all HTTP methods (GET, POST, PUT, DELETE)
+      • HttpCacheOptionsBuilder with fluent API: AddHeader(), AddHeaders(), RemoveHeader(),
+      ClearHeaders()
+      • Intelligent cache key generation that includes headers for proper cache isolation
+      • Header merging functionality combining default and custom headers
 
       🏗️ Architecture Improvements:
 
-      • Clear separation between Generic (type-safe) and Universal (multi-type) caching
-      • Namespace restructuring for better developer experience
-      • Comprehensive documentation and choosing guides
+      • Enhanced HttpClientWithCache with comprehensive header support
+      • Updated CachedHttpClient&lt;T&gt; generic implementation with header functionality
+      • Case-insensitive header handling using StringComparer.OrdinalIgnoreCase
+      • Smart cache key generation prevents header-related cache collisions
+      • Extended service registration methods with header configuration support
+
+      🔧 Technical Enhancements:
+
+      • Full .NET 6, 8, 9 compatibility with proper validation method handling
+      • Improved parameter validation in primary constructors
+      • Comprehensive test coverage (325+ tests) validating all header scenarios
+      • Documentation updates with header usage examples and patterns
+
+      🎯 Key Use Cases:
+
+      • OAuth token caching with tenant-specific headers
+      • API versioning with cached responses per version
+      • Multi-tenant applications with isolated cached data
+      • Authentication headers with intelligent cache management
 
       🔄 Backward Compatibility:
 
-      • All existing Universal caching APIs remain unchanged
-      • Existing code continues to work without modifications
-      • Migration path available for those wanting type-safe benefits
-
-      📖 Documentation:
+      • All existing caching APIs remain unchanged
+      • No breaking changes to existing functionality
+      • Optional header features don't affect current usage patterns
 
       • Complete architecture guide and decision framework
       • Real-world examples and common scenarios
@@ -35,12 +51,17 @@
     </PackageReleaseNotes>
     <Authors>Andrey Krisanov</Authors>
     <Company></Company>
-    <Description>Intelligent HTTP response caching for Reliable.HttpClient with two distinct
-      approaches: Generic type-safe caching (CachedHttpClient&lt;T&gt;) for specific response types
-      and Universal caching (HttpClientWithCache) for multi-type scenarios. Features preset-based
+    <Description>Intelligent HTTP response caching for Reliable.HttpClient with comprehensive custom
+      headers support.
+      Features two distinct approaches: Generic type-safe caching (CachedHttpClient&lt;T&gt;) for
+      specific response types
+      and Universal caching (HttpClientWithCache) for multi-type scenarios. Includes DefaultHeaders
+      configuration,
+      per-request header support, intelligent cache key generation with header isolation,
+      preset-based
       configuration, automatic memory management, and zero-setup convenience methods.</Description>
     <PackageTags>
-      httpclient;caching;resilience;memory-cache;presets;zero-config;dotnet;generic;type-safe;universal</PackageTags>
+      httpclient;caching;resilience;memory-cache;presets;zero-config;dotnet;generic;type-safe;universal;headers;oauth;authentication</PackageTags>
     <RepositoryUrl>https://github.com/akrisanov/Reliable.HttpClient</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
