@@ -196,7 +196,7 @@ public class BuilderIntegrationTests
         options.BaseUrl.Should().Be("https://minimal.example.com");
         // All other values should be defaults
         options.TimeoutSeconds.Should().Be(30);
-        options.UserAgent.Should().Be("Reliable.HttpClient/1.1.0");
+        options.UserAgent.Should().Be("Reliable.HttpClient/1.2.0");
         options.DefaultHeaders.Should().BeEmpty();
         options.Retry.MaxRetries.Should().Be(3);
         options.CircuitBreaker.Enabled.Should().BeTrue();

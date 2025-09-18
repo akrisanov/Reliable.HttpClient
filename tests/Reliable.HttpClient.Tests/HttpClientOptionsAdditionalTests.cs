@@ -31,7 +31,7 @@ public class HttpClientOptionsAdditionalTests
         // Assert
         options.BaseUrl.Should().BeEmpty();
         options.TimeoutSeconds.Should().Be(30);
-        options.UserAgent.Should().Be("Reliable.HttpClient/1.1.0");
+        options.UserAgent.Should().Be("Reliable.HttpClient/1.2.0");
         options.DefaultHeaders.Should().NotBeNull();
         options.DefaultHeaders.Should().BeEmpty();
         options.Retry.Should().NotBeNull();
