@@ -17,6 +17,19 @@ public interface IHttpClientAdapter
         CancellationToken cancellationToken = default) where TResponse : class;
 
     /// <summary>
+    /// Performs GET request with custom headers
+    /// </summary>
+    /// <typeparam name="TResponse">Response type after deserialization</typeparam>
+    /// <param name="requestUri">Request URI</param>
+    /// <param name="headers">Custom headers to add to the request</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Typed response</returns>
+    Task<TResponse> GetAsync<TResponse>(
+        string requestUri,
+        IDictionary<string, string> headers,
+        CancellationToken cancellationToken = default) where TResponse : class;
+
+    /// <summary>
     /// Performs GET request
     /// </summary>
     /// <typeparam name="TResponse">Response type after deserialization</typeparam>
@@ -25,6 +38,19 @@ public interface IHttpClientAdapter
     /// <returns>Typed response</returns>
     Task<TResponse> GetAsync<TResponse>(
         Uri requestUri,
+        CancellationToken cancellationToken = default) where TResponse : class;
+
+    /// <summary>
+    /// Performs GET request with custom headers
+    /// </summary>
+    /// <typeparam name="TResponse">Response type after deserialization</typeparam>
+    /// <param name="requestUri">Request URI</param>
+    /// <param name="headers">Custom headers to add to the request</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Typed response</returns>
+    Task<TResponse> GetAsync<TResponse>(
+        Uri requestUri,
+        IDictionary<string, string> headers,
         CancellationToken cancellationToken = default) where TResponse : class;
 
     /// <summary>
@@ -42,6 +68,22 @@ public interface IHttpClientAdapter
         CancellationToken cancellationToken = default) where TResponse : class;
 
     /// <summary>
+    /// Performs POST request with custom headers
+    /// </summary>
+    /// <typeparam name="TRequest">Request content type</typeparam>
+    /// <typeparam name="TResponse">Response type after deserialization</typeparam>
+    /// <param name="requestUri">Request URI</param>
+    /// <param name="content">Request content</param>
+    /// <param name="headers">Custom headers to add to the request</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Typed response</returns>
+    Task<TResponse> PostAsync<TRequest, TResponse>(
+        string requestUri,
+        TRequest content,
+        IDictionary<string, string> headers,
+        CancellationToken cancellationToken = default) where TResponse : class;
+
+    /// <summary>
     /// Performs POST request
     /// </summary>
     /// <typeparam name="TRequest">Request content type</typeparam>
@@ -52,6 +94,21 @@ public interface IHttpClientAdapter
     Task<HttpResponseMessage> PostAsync<TRequest>(
         string requestUri,
         TRequest content,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Performs POST request with custom headers
+    /// </summary>
+    /// <typeparam name="TRequest">Request content type</typeparam>
+    /// <param name="requestUri">Request URI</param>
+    /// <param name="content">Request content</param>
+    /// <param name="headers">Custom headers to add to the request</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>HTTP response message</returns>
+    Task<HttpResponseMessage> PostAsync<TRequest>(
+        string requestUri,
+        TRequest content,
+        IDictionary<string, string> headers,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -69,6 +126,22 @@ public interface IHttpClientAdapter
         CancellationToken cancellationToken = default) where TResponse : class;
 
     /// <summary>
+    /// Performs PUT request with custom headers
+    /// </summary>
+    /// <typeparam name="TRequest">Request content type</typeparam>
+    /// <typeparam name="TResponse">Response type after deserialization</typeparam>
+    /// <param name="requestUri">Request URI</param>
+    /// <param name="content">Request content</param>
+    /// <param name="headers">Custom headers to add to the request</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Typed response</returns>
+    Task<TResponse> PutAsync<TRequest, TResponse>(
+        string requestUri,
+        TRequest content,
+        IDictionary<string, string> headers,
+        CancellationToken cancellationToken = default) where TResponse : class;
+
+    /// <summary>
     /// Performs DELETE request
     /// </summary>
     /// <param name="requestUri">Request URI</param>
@@ -76,6 +149,18 @@ public interface IHttpClientAdapter
     /// <returns>HTTP response message</returns>
     Task<HttpResponseMessage> DeleteAsync(
         string requestUri,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Performs DELETE request with custom headers
+    /// </summary>
+    /// <param name="requestUri">Request URI</param>
+    /// <param name="headers">Custom headers to add to the request</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>HTTP response message</returns>
+    Task<HttpResponseMessage> DeleteAsync(
+        string requestUri,
+        IDictionary<string, string> headers,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -87,5 +172,18 @@ public interface IHttpClientAdapter
     /// <returns>Typed response</returns>
     Task<TResponse> DeleteAsync<TResponse>(
         string requestUri,
+        CancellationToken cancellationToken = default) where TResponse : class;
+
+    /// <summary>
+    /// Performs DELETE request with typed response and custom headers
+    /// </summary>
+    /// <typeparam name="TResponse">Response type after deserialization</typeparam>
+    /// <param name="requestUri">Request URI</param>
+    /// <param name="headers">Custom headers to add to the request</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Typed response</returns>
+    Task<TResponse> DeleteAsync<TResponse>(
+        string requestUri,
+        IDictionary<string, string> headers,
         CancellationToken cancellationToken = default) where TResponse : class;
 }

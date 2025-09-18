@@ -65,6 +65,19 @@ public class ApiClient(HttpClient client)
     public async Task<Data> GetDataAsync() =>
         await client.GetFromJsonAsync<Data>("/endpoint");
 }
+
+// Need custom headers? Use the adapter pattern:
+public class AuthApiClient(IHttpClientAdapter client, ITokenProvider tokens)
+{
+    public async Task<Data> GetDataAsync(string userId)
+    {
+        var headers = new Dictionary<string, string>
+        {
+            { "Authorization", $"Bearer {await tokens.GetTokenAsync(userId)}" }
+        };
+        return await client.GetAsync<Data>("/endpoint", headers);
+    }
+}
 ```
 
 **You now have:** Automatic retries + Circuit breaker + Smart error handling
@@ -78,6 +91,8 @@ public class ApiClient(HttpClient client)
 - **Zero Configuration** – Works out of the box
 - **Resilience** – Retry + Circuit breaker
 - **Caching** – Intelligent HTTP response caching
+- **Custom Headers** – Default and per-request header support
+- **OAuth/Auth Support** – Dynamic token handling per request
 - **Universal Handlers** – Non-generic response handling for REST APIs
 - **HttpClient Substitution** – Switch between cached/non-cached implementations
 - **Production Ready** – Used by companies in production

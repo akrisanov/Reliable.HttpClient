@@ -21,6 +21,11 @@ public class HttpClientOptions
     public string UserAgent { get; set; } = "Reliable.HttpClient/1.1.0";
 
     /// <summary>
+    /// Default headers to add to all requests
+    /// </summary>
+    public IDictionary<string, string> DefaultHeaders { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Retry policy configuration
     /// </summary>
     public RetryOptions Retry { get; set; } = new();

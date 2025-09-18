@@ -44,6 +44,34 @@ builder.Services.AddHttpClient<MyApiClient>(c =>
 - Circuit breaker (opens after 5 failures)
 - Smart error handling (5xx, timeouts, rate limits)
 
+### Step 1.5: Adding Headers
+
+For APIs that require authentication or custom headers:
+
+```csharp
+// Static headers (same for all requests)
+builder.Services.AddHttpClient<MyApiClient>(c =>
+{
+    c.BaseAddress = new Uri("https://api.example.com");
+})
+.AddResilience(options =>
+{
+    options.DefaultHeaders["X-API-Key"] = "your-api-key";
+    options.DefaultHeaders["Accept"] = "application/json";
+});
+
+// Or using fluent builder
+builder.Services.AddHttpClient<MyApiClient>(c =>
+{
+    c.BaseAddress = new Uri("https://api.example.com");
+})
+.AddResilience(builder => builder
+    .WithHeader("X-API-Key", "your-api-key")
+    .WithHeader("Accept", "application/json"));
+```
+
+For dynamic headers (like OAuth tokens), see [Custom Headers Documentation](configuration.md#custom-headers).
+
 ### Step 2: Choose Your Architecture Pattern
 
 Different patterns work better for different scenarios:

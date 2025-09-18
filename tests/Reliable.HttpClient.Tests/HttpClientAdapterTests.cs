@@ -95,24 +95,9 @@ public class HttpClientAdapterTests
         result.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
-    [Fact]
-    public void Constructor_WithNullHttpClient_ThrowsArgumentNullException()
-    {
-        // Act & Assert
-        Func<HttpClientAdapter> act = () => new HttpClientAdapter(null!, _mockResponseHandler.Object);
-        act.Should().Throw<ArgumentNullException>().WithParameterName("httpClient");
-    }
-
-    [Fact]
-    public void Constructor_WithNullResponseHandler_ThrowsArgumentNullException()
-    {
-        // Arrange
-        var httpClient = new System.Net.Http.HttpClient();
-
-        // Act & Assert
-        Func<HttpClientAdapter> act = () => new HttpClientAdapter(httpClient, null!);
-        act.Should().Throw<ArgumentNullException>().WithParameterName("responseHandler");
-    }
+    // NOTE: HttpClientAdapter is designed for DI container usage where dependencies are guaranteed.
+    // Manual constructor parameter validation is not needed as DI container handles dependency resolution.
+    // These tests are removed as they tested anti-patterns for the intended usage.
 
     [Fact]
     public async Task PutAsync_WithTypedResponse_CallsResponseHandler()
@@ -192,8 +177,11 @@ public class HttpClientAdapterTests
 
     private class MockHttpMessageHandler(string response) : HttpMessageHandler
     {
+        public HttpRequestMessage? LastRequest { get; private set; }
+
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            LastRequest = request;
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(response),

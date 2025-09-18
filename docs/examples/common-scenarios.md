@@ -649,6 +649,245 @@ public record FeatureFlags(bool EnableNewUi, bool EnableBetaFeatures, string Api
 
 ---
 
+## OAuth API Client
+
+**Business Context**: API client that needs to handle OAuth authentication with token refresh and per-request authorization.
+
+**Challenge**: Different requests need different tokens (user tokens, service tokens) and request-specific headers for tracing.
+
+```csharp
+public interface IOAuthTokenProvider
+{
+    Task<string> GetUserTokenAsync(string userId);
+    Task<string> GetServiceTokenAsync();
+    Task<string> RefreshTokenAsync(string refreshToken);
+}
+
+public class UserApiClient
+{
+    private readonly IHttpClientAdapter _client;
+    private readonly IOAuthTokenProvider _tokenProvider;
+    private readonly ILogger<UserApiClient> _logger;
+
+    public UserApiClient(IHttpClientAdapter client, IOAuthTokenProvider tokenProvider, ILogger<UserApiClient> logger)
+    {
+        _client = client;
+        _tokenProvider = tokenProvider;
+        _logger = logger;
+    }
+
+    public async Task<UserProfile> GetUserProfileAsync(string userId, string? requestId = null)
+    {
+        var token = await _tokenProvider.GetUserTokenAsync(userId);
+        var headers = new Dictionary<string, string>
+        {
+            { "Authorization", $"Bearer {token}" },
+            { "X-Request-Id", requestId ?? Guid.NewGuid().ToString() },
+            { "X-User-Context", userId }
+        };
+
+        _logger.LogInformation("Fetching user profile for {UserId}", userId);
+        return await _client.GetAsync<UserProfile>($"/users/{userId}/profile", headers);
+    }
+
+    public async Task<UserProfile> UpdateUserProfileAsync(string userId, UpdateProfileRequest request)
+    {
+        var token = await _tokenProvider.GetUserTokenAsync(userId);
+        var headers = new Dictionary<string, string>
+        {
+            { "Authorization", $"Bearer {token}" },
+            { "X-Request-Id", Guid.NewGuid().ToString() },
+            { "X-User-Context", userId },
+            { "X-Action", "profile-update" }
+        };
+
+        return await _client.PutAsync<UpdateProfileRequest, UserProfile>($"/users/{userId}/profile", request, headers);
+    }
+
+    public async Task<IEnumerable<User>> SearchUsersAsync(string query, int page = 1, int pageSize = 20)
+    {
+        // Service-to-service call with service token
+        var serviceToken = await _tokenProvider.GetServiceTokenAsync();
+        var headers = new Dictionary<string, string>
+        {
+            { "Authorization", $"Bearer {serviceToken}" },
+            { "X-Request-Id", Guid.NewGuid().ToString() },
+            { "X-Page", page.ToString() },
+            { "X-Page-Size", pageSize.ToString() }
+        };
+
+        var response = await _client.GetAsync<SearchResponse<User>>($"/users/search?q={query}&page={page}&size={pageSize}", headers);
+        return response.Results;
+    }
+}
+
+// Registration
+public class Startup
+{
+    public void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IOAuthTokenProvider, OAuthTokenProvider>();
+
+        services.AddHttpClient<UserApiClient>(c =>
+        {
+            c.BaseAddress = new Uri("https://api.users.com");
+        })
+        .AddResilience(builder => builder
+            .WithHeader("Accept", "application/json")
+            .WithHeader("X-Client-Id", "my-service")
+            .WithUserAgent("MyService/1.0")
+            .WithRetry(retry => retry
+                .WithMaxRetries(3)
+                .WithBaseDelay(TimeSpan.FromSeconds(1)))
+            .WithCircuitBreaker(cb => cb
+                .WithFailureThreshold(5)
+                .WithOpenDuration(TimeSpan.FromMinutes(2))));
+
+        services.AddScoped<IHttpClientAdapter, HttpClientAdapter>();
+    }
+}
+```
+
+**Key Benefits**:
+- Dynamic token handling per request
+- Request tracing with unique IDs
+- User context preservation
+- Service vs user token separation
+
+---
+
+## Multi-Tenant API Client
+
+**Business Context**: SaaS application serving multiple tenants with tenant-specific configurations and headers.
+
+```csharp
+public class TenantApiClient
+{
+    private readonly IHttpClientAdapter _client;
+    private readonly ITenantContext _tenantContext;
+    private readonly ILogger<TenantApiClient> _logger;
+
+    public TenantApiClient(IHttpClientAdapter client, ITenantContext tenantContext, ILogger<TenantApiClient> logger)
+    {
+        _client = client;
+        _tenantContext = tenantContext;
+        _logger = logger;
+    }
+
+    public async Task<TenantData> GetTenantDataAsync(string dataId)
+    {
+        var tenant = _tenantContext.CurrentTenant;
+        var headers = CreateTenantHeaders(tenant);
+
+        return await _client.GetAsync<TenantData>($"/data/{dataId}", headers);
+    }
+
+    public async Task<TenantSettings> UpdateTenantSettingsAsync(TenantSettings settings)
+    {
+        var tenant = _tenantContext.CurrentTenant;
+        var headers = CreateTenantHeaders(tenant);
+        headers["X-Action"] = "settings-update";
+        headers["X-Version"] = settings.Version.ToString();
+
+        return await _client.PutAsync<TenantSettings, TenantSettings>($"/tenants/{tenant.Id}/settings", settings, headers);
+    }
+
+    private Dictionary<string, string> CreateTenantHeaders(Tenant tenant)
+    {
+        return new Dictionary<string, string>
+        {
+            { "X-Tenant-Id", tenant.Id.ToString() },
+            { "X-Tenant-Tier", tenant.Tier.ToString() },
+            { "X-Region", tenant.Region },
+            { "X-Request-Id", Guid.NewGuid().ToString() },
+            { "Authorization", $"Bearer {tenant.ApiKey}" }
+        };
+    }
+}
+```
+
+---
+
+## API Versioning Client
+
+**Business Context**: Client that needs to support multiple API versions with version-specific headers and content negotiation.
+
+```csharp
+public class VersionedApiClient
+{
+    private readonly IHttpClientAdapter _client;
+    private readonly ILogger<VersionedApiClient> _logger;
+
+    public VersionedApiClient(IHttpClientAdapter client, ILogger<VersionedApiClient> logger)
+    {
+        _client = client;
+        _logger = logger;
+    }
+
+    public async Task<ProductV1> GetProductV1Async(int productId)
+    {
+        var headers = new Dictionary<string, string>
+        {
+            { "Accept", "application/vnd.api.v1+json" },
+            { "X-API-Version", "1.0" }
+        };
+
+        return await _client.GetAsync<ProductV1>($"/products/{productId}", headers);
+    }
+
+    public async Task<ProductV2> GetProductV2Async(int productId)
+    {
+        var headers = new Dictionary<string, string>
+        {
+            { "Accept", "application/vnd.api.v2+json" },
+            { "X-API-Version", "2.0" },
+            { "X-Features", "enhanced-metadata,pricing-tiers" }
+        };
+
+        return await _client.GetAsync<ProductV2>($"/products/{productId}", headers);
+    }
+
+    public async Task<ProductV3> GetProductV3Async(int productId, bool includeRecommendations = false)
+    {
+        var headers = new Dictionary<string, string>
+        {
+            { "Accept", "application/vnd.api.v3+json" },
+            { "X-API-Version", "3.0" }
+        };
+
+        if (includeRecommendations)
+        {
+            headers["X-Include"] = "recommendations,related-products";
+        }
+
+        return await _client.GetAsync<ProductV3>($"/products/{productId}", headers);
+    }
+
+    // Generic version for testing new API versions
+    public async Task<T> GetWithVersionAsync<T>(string endpoint, string version, Dictionary<string, string>? additionalHeaders = null)
+    {
+        var headers = new Dictionary<string, string>
+        {
+            { "Accept", $"application/vnd.api.v{version}+json" },
+            { "X-API-Version", version },
+            { "X-Client", "VersionedClient/1.0" }
+        };
+
+        if (additionalHeaders != null)
+        {
+            foreach (var header in additionalHeaders)
+            {
+                headers[header.Key] = header.Value;
+            }
+        }
+
+        return await _client.GetAsync<T>(endpoint, headers);
+    }
+}
+```
+
+---
+
 ## Summary
 
 Each business scenario requires different resilience and caching strategies:
@@ -662,5 +901,8 @@ Each business scenario requires different resilience and caching strategies:
 | **Product Catalog**     | Performance          | `FastInternalApi()` + Generic   | Type-safe, optimized cache  |
 | **Configuration**       | System stability     | `FastInternalApi()` + Universal | Flexible, fallback support |
 | **Universal REST API**  | Maintainability      | Universal handlers              | Single registration pattern |
+| **OAuth API Client**    | Dynamic auth         | Custom with `IHttpClientAdapter` | Token-aware per request    |
+| **Multi-Tenant**        | Tenant isolation     | Headers per tenant              | Tenant-specific caching     |
+| **API Versioning**      | Version flexibility  | Version-specific headers        | Version-aware cache keys    |
 
 > 💡 **Next Steps**: See [Configuration Examples](configuration-examples.md) for detailed configuration patterns and techniques.

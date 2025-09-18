@@ -141,6 +141,12 @@ public static class HttpClientExtensions
             client.DefaultRequestHeaders.Add("User-Agent", options.UserAgent);
         }
 
+        // Add default headers
+        foreach (KeyValuePair<string, string> header in options.DefaultHeaders)
+        {
+            client.DefaultRequestHeaders.TryAddWithoutValidation(header.Key, header.Value);
+        }
+
         configureClient?.Invoke(options, client);
     }
 

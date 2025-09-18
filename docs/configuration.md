@@ -30,7 +30,9 @@ Strongly-typed, IntelliSense-friendly configuration:
 
 ```csharp
 .AddResilience(builder => builder
+    .WithBaseUrl("https://api.example.com")
     .WithTimeout(TimeSpan.FromMinutes(1))
+    .WithUserAgent("MyApp/1.0")
     .WithRetry(retry => retry
         .WithMaxRetries(5)
         .WithBaseDelay(TimeSpan.FromSeconds(2))
@@ -101,14 +103,26 @@ services.AddHttpClient<MyApiClient>()
 
 ### HttpClientOptions
 
-| Property         | Type                     | Default   | Description                       |
-|------------------|--------------------------|-----------|-----------------------------------|
-| `Retry`          | `RetryOptions`           | See below | Retry policy configuration        |
-| `CircuitBreaker` | `CircuitBreakerOptions`  | See below | Circuit breaker configuration     |
+| Property         | Type                              | Default                    | Description                            |
+|------------------|-----------------------------------|----------------------------|----------------------------------------|
+| `BaseUrl`        | `string`                          | `""`                       | Base API URL                           |
+| `TimeoutSeconds` | `int`                             | `30`                       | Request timeout in seconds             |
+| `UserAgent`      | `string`                          | `"Reliable.HttpClient/1.1.0"` | User-Agent header                  |
+| `DefaultHeaders` | `IDictionary<string, string>`     | `{}`                       | Default headers for all requests. See [Advanced Usage](advanced-usage.md#header-management) for OAuth and dynamic headers. |
+| `Retry`          | `RetryOptions`                    | See below                  | Retry policy configuration             |
+| `CircuitBreaker` | `CircuitBreakerOptions`           | See below                  | Circuit breaker configuration          |
 
 ```csharp
 .AddResilience(options =>
 {
+    // Basic settings
+    options.BaseUrl = "https://api.example.com";
+    options.TimeoutSeconds = 60;
+    options.UserAgent = "MyApp/1.0";
+
+    // Basic headers (for advanced patterns see Advanced Usage guide)
+    options.DefaultHeaders["X-API-Key"] = "your-api-key";
+
     // Configure retry settings
     options.Retry.MaxRetries = 5;
 
@@ -219,3 +233,8 @@ Invalid configurations throw `ArgumentException` with descriptive error messages
 var config = configuration.GetSection("HttpClient").Get<HttpClientOptions>();
 services.AddHttpClient("api").AddResilience(config);
 ```
+
+## Advanced Configuration
+
+For advanced scenarios including OAuth tokens, dynamic headers, authentication patterns, and complex API integrations,
+see the [Advanced Usage Guide](advanced-usage.md).

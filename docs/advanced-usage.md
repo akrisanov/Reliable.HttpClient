@@ -2,6 +2,259 @@
 
 Learn advanced techniques and patterns for using Reliable.HttpClient in complex scenarios.
 
+## Header Management
+
+Reliable.HttpClient provides comprehensive header management capabilities for various authentication and API integration scenarios.
+
+### Basic Header Operations
+
+```csharp
+services.AddHttpClient("api")
+    .AddResilience(builder => builder
+        // Add single header
+        .WithHeader("Authorization", "Bearer your-token")
+        .WithHeader("X-API-Key", "your-api-key")
+
+        // Add multiple headers at once
+        .WithHeaders(new Dictionary<string, string>
+        {
+            { "User-Agent", "MyApp/1.0" },
+            { "Accept", "application/json" },
+            { "X-Client-Version", "2.1.0" }
+        })
+
+        // Remove unwanted headers
+        .WithoutHeader("X-Debug")
+
+        // Clear all headers (useful for testing)
+        .WithoutHeaders());
+```
+
+### OAuth Token Management
+
+For APIs requiring OAuth tokens, you can set authorization headers:
+
+```csharp
+// Static token (for service-to-service)
+services.AddHttpClient("auth-api")
+    .AddResilience(builder => builder
+        .WithBaseUrl("https://api.partner.com")
+        .WithHeader("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+        .WithHeader("X-Client-ID", "your-client-id"));
+
+// Dynamic token refresh pattern
+public class TokenRefreshService
+{
+    private readonly HttpClient _httpClient;
+    private readonly IMemoryCache _cache;
+
+    public async Task<string> GetAccessTokenAsync()
+    {
+        if (_cache.TryGetValue("access_token", out string token))
+            return token;
+
+        // Refresh token logic
+        var response = await _httpClient.PostAsync("/oauth/token", content);
+        var tokenData = await response.Content.ReadFromJsonAsync<TokenResponse>();
+
+        _cache.Set("access_token", tokenData.AccessToken, TimeSpan.FromMinutes(50));
+        return tokenData.AccessToken;
+    }
+}
+
+// Usage with dynamic headers (use IHttpClientAdapter for runtime header support)
+public class ApiService
+{
+    private readonly IHttpClientAdapter _client;
+    private readonly TokenRefreshService _tokenService;
+
+    public async Task<ApiResponse> GetDataAsync()
+    {
+        var token = await _tokenService.GetAccessTokenAsync();
+        var headers = new Dictionary<string, string>
+        {
+            { "Authorization", $"Bearer {token}" }
+        };
+
+        return await _client.GetAsync<ApiResponse>("/api/data", headers);
+    }
+}
+```
+
+### API Key Patterns
+
+```csharp
+// Header-based API key
+services.AddHttpClient("header-auth-api")
+    .AddResilience(builder => builder
+        .WithHeader("X-API-Key", "your-api-key")
+        .WithHeader("X-API-Secret", "your-api-secret"));
+
+// Multiple API keys for different environments
+public static class ApiConfiguration
+{
+    public static IHttpClientBuilder AddApiClient(
+        this IServiceCollection services,
+        string environment)
+    {
+        var config = GetApiConfig(environment);
+
+        return services.AddHttpClient("api-client")
+            .AddResilience(builder => builder
+                .WithBaseUrl(config.BaseUrl)
+                .WithHeader("X-API-Key", config.ApiKey)
+                .WithHeader("X-Environment", environment));
+    }
+
+    private static ApiConfig GetApiConfig(string env) => env switch
+    {
+        "production" => new("https://api.prod.com", "prod-key"),
+        "staging" => new("https://api.staging.com", "staging-key"),
+        _ => new("https://api.dev.com", "dev-key")
+    };
+}
+```
+
+### Custom Authentication Headers
+
+```csharp
+// HMAC signature authentication
+public class HmacAuthenticationService
+{
+    public Dictionary<string, string> CreateAuthHeaders(string method, string uri, string body)
+    {
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+        var nonce = Guid.NewGuid().ToString("N")[..16];
+        var signature = CreateHmacSignature(method, uri, body, timestamp, nonce);
+
+        return new Dictionary<string, string>
+        {
+            { "X-Timestamp", timestamp },
+            { "X-Nonce", nonce },
+            { "X-Signature", signature },
+            { "Authorization", "HMAC-SHA256" }
+        };
+    }
+}
+
+// Usage with runtime headers
+public async Task<T> SecurePostAsync<T>(string uri, object data)
+{
+    var json = JsonSerializer.Serialize(data);
+    var headers = _hmacService.CreateAuthHeaders("POST", uri, json);
+
+    return await _httpClient.PostAsync<object, T>(uri, data, headers);
+}
+```
+
+### Multi-tenant Header Management
+
+```csharp
+public class TenantAwareApiClient
+{
+    private readonly IHttpClientAdapter _client;
+    private readonly ITenantContext _tenantContext;
+
+    public async Task<T> GetAsync<T>(string endpoint)
+    {
+        var headers = new Dictionary<string, string>
+        {
+            { "X-Tenant-ID", _tenantContext.TenantId },
+            { "X-User-ID", _tenantContext.UserId },
+            { "Authorization", $"Bearer {_tenantContext.AccessToken}" }
+        };
+
+        return await _client.GetAsync<T>(endpoint, headers);
+    }
+}
+
+// Registration
+services.AddScoped<ITenantContext, TenantContext>();
+services.AddHttpClient()
+    .AddHttpClientAdapter()
+    .AddResilience();
+services.AddScoped<TenantAwareApiClient>();
+```
+
+### Conditional Headers
+
+```csharp
+public class ConditionalHeadersClient
+{
+    private readonly IHttpClientAdapter _client;
+    private readonly IConfiguration _config;
+
+    public async Task<T> GetAsync<T>(string endpoint, bool includeDebugHeaders = false)
+    {
+        var headers = new Dictionary<string, string>
+        {
+            { "Authorization", $"Bearer {GetToken()}" }
+        };
+
+        // Add debug headers only in development
+        if (includeDebugHeaders && _config.GetValue<bool>("IncludeDebugHeaders"))
+        {
+            headers.Add("X-Debug-Mode", "true");
+            headers.Add("X-Correlation-ID", Guid.NewGuid().ToString());
+            headers.Add("X-Request-Source", Environment.MachineName);
+        }
+
+        // Add versioning headers
+        var apiVersion = _config.GetValue<string>("ApiVersion");
+        if (!string.IsNullOrEmpty(apiVersion))
+        {
+            headers.Add("API-Version", apiVersion);
+        }
+
+        return await _client.GetAsync<T>(endpoint, headers);
+    }
+}
+```
+
+### Header Validation and Sanitization
+
+```csharp
+public static class HeaderValidator
+{
+    private static readonly HashSet<string> ForbiddenHeaders = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Host", "Content-Length", "Transfer-Encoding", "Connection"
+    };
+
+    public static Dictionary<string, string> ValidateAndSanitize(
+        IDictionary<string, string> headers)
+    {
+        var sanitized = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (key, value) in headers)
+        {
+            // Skip forbidden headers
+            if (ForbiddenHeaders.Contains(key))
+                continue;
+
+            // Sanitize header values
+            var cleanValue = value?.Trim();
+            if (string.IsNullOrEmpty(cleanValue))
+                continue;
+
+            // Remove dangerous characters
+            cleanValue = cleanValue.Replace("\r", "").Replace("\n", "");
+
+            sanitized[key] = cleanValue;
+        }
+
+        return sanitized;
+    }
+}
+
+// Usage in service
+public async Task<T> SafeGetAsync<T>(string endpoint, IDictionary<string, string> userHeaders)
+{
+    var sanitizedHeaders = HeaderValidator.ValidateAndSanitize(userHeaders);
+    return await _client.GetAsync<T>(endpoint, sanitizedHeaders);
+}
+```
+
 ## Multiple Named HttpClients
 
 Configure different resilience policies for different services using presets and custom configuration:
