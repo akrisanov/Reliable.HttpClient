@@ -200,7 +200,7 @@ public class DependencyInjectionTests
 
         // Act & Assert
         Func<IServiceCollection> action = () => services.AddHttpClientCaching<TestApiClient, ApiResponse>();
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<ArgumentException>()
             .WithMessage("*IMemoryCache is not registered*");
     }
 

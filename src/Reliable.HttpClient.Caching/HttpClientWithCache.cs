@@ -20,7 +20,7 @@ public class HttpClientWithCache(
     IHttpResponseHandler responseHandler,
     ISimpleCacheKeyGenerator? cacheKeyGenerator = null,
     ILogger<HttpClientWithCache>? logger = null,
-    TimeSpan? defaultCacheDuration = null) : IHttpClientWithCache
+    TimeSpan? defaultCacheDuration = null) : IHttpClientWithCache, IHttpClientAdapter
 {
     private readonly System.Net.Http.HttpClient _httpClient = httpClient;
     private readonly IMemoryCache _cache = cache;
@@ -37,7 +37,7 @@ public class HttpClientWithCache(
     {
         var cacheKey = _cacheKeyGenerator.GenerateKey(typeof(TResponse).Name, requestUri);
 
-        if (_cache.TryGetValue(cacheKey, out TResponse? cachedResult) && cachedResult != null)
+        if (_cache.TryGetValue(cacheKey, out TResponse? cachedResult) && cachedResult is not null)
         {
             _logger?.LogDebug("Cache hit for key: {CacheKey}", cacheKey);
             return cachedResult;
@@ -146,5 +146,27 @@ public class HttpClientWithCache(
             var resourcePath = string.Join('/', pathSegments[..^1]);
             await InvalidateCacheAsync(resourcePath).ConfigureAwait(false);
         }
+    }
+
+    // IHttpClientAdapter implementation (without caching for non-GET operations)
+    Task<TResponse> IHttpClientAdapter.GetAsync<TResponse>(string requestUri, CancellationToken cancellationToken) =>
+        GetAsync<TResponse>(requestUri, cacheDuration: null, cancellationToken);
+
+    Task<TResponse> IHttpClientAdapter.GetAsync<TResponse>(Uri requestUri, CancellationToken cancellationToken) =>
+        GetAsync<TResponse>(requestUri, cacheDuration: null, cancellationToken);
+
+    async Task<HttpResponseMessage> IHttpClientAdapter.PostAsync<TRequest>(
+        string requestUri, TRequest content, CancellationToken cancellationToken)
+    {
+        HttpResponseMessage response = await _httpClient.PostAsJsonAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
+        await InvalidateRelatedCacheAsync(requestUri).ConfigureAwait(false);
+        return response;
+    }
+
+    async Task<HttpResponseMessage> IHttpClientAdapter.DeleteAsync(string requestUri, CancellationToken cancellationToken)
+    {
+        HttpResponseMessage response = await _httpClient.DeleteAsync(requestUri, cancellationToken).ConfigureAwait(false);
+        await InvalidateRelatedCacheAsync(requestUri).ConfigureAwait(false);
+        return response;
     }
 }

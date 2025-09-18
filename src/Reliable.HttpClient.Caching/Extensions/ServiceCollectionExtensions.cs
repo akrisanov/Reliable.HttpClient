@@ -73,4 +73,42 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
+
+    /// <summary>
+    /// Adds HttpClientWithCache as both IHttpClientWithCache and IHttpClientAdapter
+    /// </summary>
+    /// <param name="services">Service collection</param>
+    /// <param name="configureOptions">Configure default cache options</param>
+    /// <returns>Service collection for chaining</returns>
+    public static IServiceCollection AddHttpClientWithCache(
+        this IServiceCollection services,
+        Action<HttpCacheOptions>? configureOptions = null)
+    {
+        // Ensure memory cache is available
+        var hasMemoryCache = services.Any(static x => x.ServiceType == typeof(IMemoryCache));
+        if (!hasMemoryCache)
+        {
+            services.AddMemoryCache();
+        }
+
+        // Ensure HttpClient is registered
+        services.AddHttpClient();
+
+        // Register core dependencies
+        services.TryAddSingleton<IHttpResponseHandler, DefaultHttpResponseHandler>();
+        services.TryAddSingleton<ISimpleCacheKeyGenerator, DefaultSimpleCacheKeyGenerator>();
+
+        // Configure cache options
+        if (configureOptions is not null)
+        {
+            services.Configure(configureOptions);
+        }
+
+        // Register HttpClientWithCache for both interfaces
+        services.TryAddScoped<HttpClientWithCache>();
+        services.TryAddScoped<IHttpClientWithCache>(provider => provider.GetRequiredService<HttpClientWithCache>());
+        services.TryAddScoped<IHttpClientAdapter>(provider => provider.GetRequiredService<HttpClientWithCache>());
+
+        return services;
+    }
 }

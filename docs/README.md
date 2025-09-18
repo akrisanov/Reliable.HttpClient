@@ -9,7 +9,51 @@ Welcome to the comprehensive documentation for Reliable.HttpClient - a complete 
 | **Reliable.HttpClient** | Core resilience (retry + circuit breaker) | Core features documented below |
 | **Reliable.HttpClient.Caching** | HTTP response caching extension | [Caching Guide](caching.md) |
 
-## What's New in v1.0+
+## What's New in v1.1+
+
+### ✨ Universal Response Handlers
+
+Eliminate "Generic Hell" for REST APIs with many entity types:
+
+```csharp
+// Before: Multiple registrations per entity type
+services.AddSingleton<IHttpResponseHandler<User>, JsonResponseHandler<User>>();
+services.AddSingleton<IHttpResponseHandler<Order>, JsonResponseHandler<Order>>();
+// ... many more
+
+// After: One registration for all entity types
+services.AddHttpClientWithCache();
+
+public class ApiClient(IHttpClientWithCache client)
+{
+    public async Task<User> GetUserAsync(int id) =>
+        await client.GetAsync<User>($"/users/{id}");
+
+    public async Task<Order> GetOrderAsync(int id) =>
+        await client.GetAsync<Order>($"/orders/{id}");
+    // Works with any entity type!
+}
+```
+
+### 🔄 HttpClient Substitution Pattern
+
+Seamlessly switch between cached and non-cached implementations:
+
+```csharp
+// Base client using adapter interface
+public class ApiClient(IHttpClientAdapter client)
+{
+    public async Task<T> GetAsync<T>(string endpoint) =>
+        await client.GetAsync<T>(endpoint);
+}
+
+// Cached version inherits everything, adds caching
+public class CachedApiClient : ApiClient
+{
+    public CachedApiClient(IHttpClientWithCache client) : base(client) { }
+    // Automatic caching + cache invalidation methods
+}
+```
 
 ### ✨ Fluent Configuration API
 
@@ -32,8 +76,15 @@ services.AddHttpClient<ApiClient>()
 ### Getting Started
 
 - [Quick Start Guide](getting-started.md) - Get up and running in minutes
+- [Choosing the Right Approach](choosing-approach.md) - **NEW!** Which pattern to use when
 - [Installation & Setup](getting-started.md#installation) - Package installation and basic configuration
 - [First Steps](getting-started.md#basic-setup) - Your first resilient HttpClient
+
+### Architecture Patterns
+
+- [Universal Response Handlers](examples/common-scenarios.md#universal-rest-api-client) - **NEW!** For REST APIs with many entity types
+- [HttpClient Substitution](examples/http-client-substitution.md) - **NEW!** Inheritance-friendly patterns
+- [Traditional Generic Approach](getting-started.md) - Maximum type safety and control
 
 ### Configuration
 

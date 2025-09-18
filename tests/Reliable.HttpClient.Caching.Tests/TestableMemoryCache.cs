@@ -126,7 +126,7 @@ internal class TestableCacheEntry : ICacheEntry
             expiration = DateTimeOffset.UtcNow.Add(AbsoluteExpirationRelativeToNow.Value);
         }
 
-        if (Value != null)
+        if (Value is not null)
         {
             _cache.Set(Key, Value, expiration);
         }

@@ -297,17 +297,19 @@ public class Startup
 {
     public void ConfigureServices(IServiceCollection services)
     {
-        // Universal HTTP client with caching and resilience
-        services.AddResilientHttpClientWithCache(
-            "crm-api",
-            HttpClientPresets.SlowExternalApi(),
-            defaultCacheDuration: TimeSpan.FromMinutes(10));
+        // Universal HTTP client with caching
+        services.AddHttpClientWithCache(options =>
+        {
+            options.DefaultExpiry = TimeSpan.FromMinutes(10);
+        });
 
-        // Configure the named client
-        services.AddHttpClient("crm-api", c =>
+        // Configure the HttpClient
+        services.AddHttpClient(c =>
         {
             c.BaseAddress = new Uri("https://api.crm.com");
             c.DefaultRequestHeaders.Add("Authorization", "Bearer token");
+        })
+        .AddResilience(HttpClientPresets.SlowExternalApi());
         });
 
         // Register API client

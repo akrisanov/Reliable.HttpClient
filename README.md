@@ -28,6 +28,7 @@ Based on [Polly](https://github.com/App-vNext/Polly) but with zero configuration
 |---------------|---------------------|---------------|
 | **Single API with 1-2 entity types** | Traditional Generic | [Getting Started](docs/getting-started.md) |
 | **REST API with 5+ entity types** | Universal Handlers | [Common Scenarios - Universal REST API](docs/examples/common-scenarios.md#universal-rest-api-client) |
+| **Need HttpClient substitution** | IHttpClientAdapter | [HttpClient Substitution](docs/examples/http-client-substitution.md) |
 | **Custom serialization/error handling** | Custom Response Handler | [Advanced Usage](docs/advanced-usage.md) |
 
 ## Packages
@@ -70,12 +71,15 @@ public class ApiClient(HttpClient client)
 
 > 🚀 **Need details?** See [Getting Started Guide](docs/getting-started.md) for step-by-step setup
 > 🆕 **Building REST APIs?** Check [Universal Response Handlers](docs/examples/common-scenarios.md#universal-rest-api-client)
+> 🔄 **Need substitution patterns?** See [HttpClient Substitution Guide](docs/examples/http-client-substitution.md)
 
 ## Key Features
 
 ✅ **Zero Configuration** - Works out of the box
 ✅ **Resilience** - Retry + Circuit breaker
 ✅ **Caching** - Intelligent HTTP response caching
+✅ **Universal Handlers** - Non-generic response handling for REST APIs
+✅ **HttpClient Substitution** - Switch between cached/non-cached implementations
 ✅ **Production Ready** - Used by companies in production
 
 > 📖 **Full Feature List**: [Documentation](docs/README.md#key-features)

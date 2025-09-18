@@ -44,7 +44,11 @@ builder.Services.AddHttpClient<MyApiClient>(c =>
 - Circuit breaker (opens after 5 failures)
 - Smart error handling (5xx, timeouts, rate limits)
 
-### Step 2: Add Caching (Optional)
+### Step 2: Choose Your Architecture Pattern
+
+Different patterns work better for different scenarios:
+
+#### Option A: Traditional Generic (Best for 1-2 entity types)
 
 ```csharp
 // Add memory cache service first
@@ -62,11 +66,62 @@ services.AddHttpClient<MyApiClient>(c =>
 });
 ```
 
-**Additional benefits:**
+#### Option B: Universal Handlers (Best for 5+ entity types)
 
-- Automatic response caching
-- SHA256-based cache keys (collision-resistant)
-- Manual cache invalidation support
+```csharp
+// Add universal cached client
+services.AddHttpClientWithCache(options =>
+{
+    options.DefaultExpiry = TimeSpan.FromMinutes(5);
+});
+
+// Use with any entity type
+public class ApiClient(IHttpClientWithCache client)
+{
+    public async Task<User> GetUserAsync(int id) =>
+        await client.GetAsync<User>($"/users/{id}");
+
+    public async Task<Order> GetOrderAsync(int id) =>
+        await client.GetAsync<Order>($"/orders/{id}");
+    // ... many more entity types without additional registrations
+}
+```
+
+#### Option C: Substitution Pattern (Best for inheritance scenarios)
+
+```csharp
+// Base client using adapter interface
+public class BaseApiClient(IHttpClientAdapter client)
+{
+    protected readonly IHttpClientAdapter Client = client;
+
+    public virtual async Task<T> GetAsync<T>(string endpoint) =>
+        await Client.GetAsync<T>(endpoint);
+}
+
+// Cached version through inheritance
+public class CachedApiClient : BaseApiClient
+{
+    private readonly IHttpClientWithCache _cachedClient;
+
+    public CachedApiClient(IHttpClientWithCache client) : base(client)
+    {
+        _cachedClient = client;
+    }
+
+    // Override with caching-specific functionality
+    public override async Task<T> GetAsync<T>(string endpoint) =>
+        await _cachedClient.GetAsync<T>(endpoint, TimeSpan.FromMinutes(5));
+}
+```
+
+> 📖 **Need help choosing?** See our [Choosing Guide](choosing-approach.md) for detailed comparison
+
+**Key benefits of each approach:**
+
+- **Traditional**: Maximum type safety and control per entity
+- **Universal**: Minimal registration overhead, works with any type
+- **Substitution**: Clean inheritance patterns, easy testing with mocks
 
 ### Step 3: Custom Configuration (Optional)
 

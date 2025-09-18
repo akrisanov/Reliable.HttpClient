@@ -27,7 +27,7 @@ If you work with many entity types (5+ types) from a REST API:
 
 ```csharp
 // Recommended for REST APIs with many entity types
-services.AddResilientHttpClientWithCache("crm-api", HttpClientPresets.SlowExternalApi());
+services.AddHttpClientWithCache();
 
 public class CrmApiClient(IHttpClientWithCache client)
 {
@@ -74,7 +74,7 @@ services.AddSingleton<IHttpResponseHandler<Contact>, JsonResponseHandler<Contact
 // ... many more
 
 // After: 1 registration
-services.AddResilientHttpClientWithCache("crm-api");
+services.AddHttpClientWithCache();
 ```
 
 ### Phase 3: Consistency (Recommended)
@@ -87,14 +87,15 @@ Choose one primary approach per project:
 
 ## Approach Comparison
 
-| Scenario            | Traditional Generic    | Universal Handler      | Cached Client          |
+| Scenario            | Traditional Generic    | Universal Handler      | Substitution Pattern   |
 |---------------------|------------------------|------------------------|------------------------|
 | **Single Entity**   | ✅ **Best**            | ❌ Overkill            | ❌ Overkill            |
 | **2-4 Entities**    | ✅ **Good**            | ✅ Good                | ✅ Good                |
 | **5+ Entities**     | ❌ Verbose             | ✅ **Best**            | ✅ **Best**            |
-| **Custom Logic**    | ✅ **Best**            | ✅ Good                | ❌ Limited             |
+| **Custom Logic**    | ✅ **Best**            | ✅ Good                | ✅ **Best**            |
 | **Performance**     | ✅ **Best**            | ✅ Good                | ✅ Good                |
-| **Caching Needed**  | ✅ Built-in            | ➕ Manual              | ✅ **Built-in**        |
+| **Inheritance**     | ❌ Complex             | ❌ Limited             | ✅ **Best**            |
+| **Testing**         | ✅ Good                | ✅ Good                | ✅ **Best** (Mockable) |
 | **DI Complexity**   | ❌ High                | ✅ **Low**             | ✅ **Low**             |
 
 ## Best Practices
@@ -141,3 +142,10 @@ public class CrmApiClient(IHttpClientWithCache client)
 - Want to reduce DI complexity
 - New project starting fresh
 - Team comfortable with generics
+
+**Use substitution pattern if:**
+
+- Need inheritance-based architecture
+- Want to switch between cached/non-cached at runtime
+- Building testable components with mockable interfaces
+- Have existing base classes to extend
