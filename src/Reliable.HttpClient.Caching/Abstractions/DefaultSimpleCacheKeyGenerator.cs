@@ -1,4 +1,4 @@
-namespace Reliable.HttpClient.Caching;
+namespace Reliable.HttpClient.Caching.Abstractions;
 
 /// <summary>
 /// Default cache key generator implementation

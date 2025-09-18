@@ -2,6 +2,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
+using Reliable.HttpClient.Caching.Abstractions;
+
 namespace Reliable.HttpClient.Caching.Extensions;
 
 /// <summary>

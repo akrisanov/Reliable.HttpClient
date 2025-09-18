@@ -34,32 +34,33 @@ public class CachedHttpClient<TResponse>(
         Func<HttpResponseMessage, Task<TResponse>> responseHandler,
         CancellationToken cancellationToken = default)
     {
+        string? cacheKey = null;
+
         // Check if this request should be cached
-        if (!ShouldCacheRequest(request))
+        if (ShouldCacheRequest(request))
+        {
+            cacheKey = _options.KeyGenerator.GenerateKey(request);
+
+            TResponse? cachedResponse = await _cache.GetAsync(cacheKey, cancellationToken).ConfigureAwait(false);
+            if (cachedResponse is not null)
+            {
+                _logger.LogDebug("Returning cached response for: {Method} {Uri}", request.Method, request.RequestUri);
+                return cachedResponse;
+            }
+
+            _logger.LogDebug("Cache miss, executing request: {Method} {Uri}", request.Method, request.RequestUri);
+        }
+        else
         {
             _logger.LogDebug("Request not cacheable: {Method} {Uri}", request.Method, request.RequestUri);
-            HttpResponseMessage response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
-            return await responseHandler(response).ConfigureAwait(false);
         }
 
-        // Generate cache key
-        var cacheKey = _options.KeyGenerator.GenerateKey(request);
-
-        // Try to get from cache first
-        TResponse? cachedResponse = await _cache.GetAsync(cacheKey, cancellationToken).ConfigureAwait(false);
-        if (cachedResponse is not null)
-        {
-            _logger.LogDebug("Returning cached response for: {Method} {Uri}", request.Method, request.RequestUri);
-            return cachedResponse;
-        }
-
-        // Execute request
-        _logger.LogDebug("Cache miss, executing request: {Method} {Uri}", request.Method, request.RequestUri);
+        // Execute request (single code path for both cacheable and non-cacheable requests)
         HttpResponseMessage httpResponse = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
-        TResponse? result = await responseHandler(httpResponse).ConfigureAwait(false);
+        TResponse result = await responseHandler(httpResponse).ConfigureAwait(false);
 
         // Cache the response if it should be cached
-        if (ShouldCacheResponse(request, httpResponse))
+        if (cacheKey is not null && ShouldCacheResponse(request, httpResponse))
         {
             TimeSpan expiry = _options.GetExpiry(request, httpResponse);
             await _cache.SetAsync(cacheKey, result, expiry, cancellationToken).ConfigureAwait(false);

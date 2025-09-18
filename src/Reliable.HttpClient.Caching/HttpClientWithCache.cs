@@ -3,6 +3,8 @@ using System.Net.Http.Json;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
+using Reliable.HttpClient.Caching.Abstractions;
+
 namespace Reliable.HttpClient.Caching;
 
 /// <summary>
@@ -71,11 +73,13 @@ public class HttpClientWithCache(
         TRequest content,
         CancellationToken cancellationToken = default) where TResponse : class
     {
-        // POST requests are not cached and may invalidate related cache entries
+        HttpResponseMessage response = await _httpClient.PostAsJsonAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
+        TResponse result = await _responseHandler.HandleAsync<TResponse>(response, cancellationToken).ConfigureAwait(false);
+
+        // Invalidate cache only after successful response handling
         await InvalidateRelatedCacheAsync(requestUri).ConfigureAwait(false);
 
-        HttpResponseMessage response = await _httpClient.PostAsJsonAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
-        return await _responseHandler.HandleAsync<TResponse>(response, cancellationToken).ConfigureAwait(false);
+        return result;
     }
 
     /// <inheritdoc />
@@ -93,11 +97,13 @@ public class HttpClientWithCache(
         TRequest content,
         CancellationToken cancellationToken = default) where TResponse : class
     {
-        // PUT requests are not cached and may invalidate related cache entries
+        HttpResponseMessage response = await _httpClient.PutAsJsonAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
+        TResponse result = await _responseHandler.HandleAsync<TResponse>(response, cancellationToken).ConfigureAwait(false);
+
+        // Invalidate cache only after successful response handling
         await InvalidateRelatedCacheAsync(requestUri).ConfigureAwait(false);
 
-        HttpResponseMessage response = await _httpClient.PutAsJsonAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
-        return await _responseHandler.HandleAsync<TResponse>(response, cancellationToken).ConfigureAwait(false);
+        return result;
     }
 
     /// <inheritdoc />
@@ -105,11 +111,13 @@ public class HttpClientWithCache(
         string requestUri,
         CancellationToken cancellationToken = default) where TResponse : class
     {
-        // DELETE requests are not cached and may invalidate related cache entries
+        HttpResponseMessage response = await _httpClient.DeleteAsync(requestUri, cancellationToken).ConfigureAwait(false);
+        TResponse result = await _responseHandler.HandleAsync<TResponse>(response, cancellationToken).ConfigureAwait(false);
+
+        // Invalidate cache only after successful response handling
         await InvalidateRelatedCacheAsync(requestUri).ConfigureAwait(false);
 
-        HttpResponseMessage response = await _httpClient.DeleteAsync(requestUri, cancellationToken).ConfigureAwait(false);
-        return await _responseHandler.HandleAsync<TResponse>(response, cancellationToken).ConfigureAwait(false);
+        return result;
     }
 
     /// <inheritdoc />
@@ -159,14 +167,20 @@ public class HttpClientWithCache(
         string requestUri, TRequest content, CancellationToken cancellationToken)
     {
         HttpResponseMessage response = await _httpClient.PostAsJsonAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
+
+        // Invalidate cache only after successful HTTP request (before response handler to maintain adapter contract)
         await InvalidateRelatedCacheAsync(requestUri).ConfigureAwait(false);
+
         return response;
     }
 
     async Task<HttpResponseMessage> IHttpClientAdapter.DeleteAsync(string requestUri, CancellationToken cancellationToken)
     {
         HttpResponseMessage response = await _httpClient.DeleteAsync(requestUri, cancellationToken).ConfigureAwait(false);
+
+        // Invalidate cache only after successful HTTP request (before response handler to maintain adapter contract)
         await InvalidateRelatedCacheAsync(requestUri).ConfigureAwait(false);
+
         return response;
     }
 }

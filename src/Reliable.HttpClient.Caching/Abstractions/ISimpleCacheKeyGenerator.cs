@@ -1,4 +1,4 @@
-namespace Reliable.HttpClient.Caching;
+namespace Reliable.HttpClient.Caching.Abstractions;
 
 /// <summary>
 /// Simple cache key generator for universal caching
