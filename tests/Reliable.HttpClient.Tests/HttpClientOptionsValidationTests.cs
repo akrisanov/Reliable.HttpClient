@@ -1,5 +1,3 @@
-#pragma warning disable MA0048 // File name must match type name
-
 using FluentAssertions;
 using Xunit;
 
@@ -245,5 +243,3 @@ public class CircuitBreakerOptionsValidationTests
             .WithMessage("OpenDuration must be greater than zero*");
     }
 }
-
-#pragma warning restore MA0048

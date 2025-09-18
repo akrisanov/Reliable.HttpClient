@@ -4,22 +4,43 @@
     Directory.Build.props -->
     <AssemblyName>Reliable.HttpClient.Caching</AssemblyName>
     <PackageId>Reliable.HttpClient.Caching</PackageId>
-    <Version>1.0.3</Version>
-    <PackageReleaseNotes>🎉 v1.0.3 Release - Ready for Independent Release!
+    <Version>1.1.0</Version>
+    <PackageReleaseNotes>🚀 v1.1.0 Release - Generic Caching Architecture!
 
-      ✨ New Features:
-      • Compatible with Reliable.HttpClient v1.1.0 universal interface
-      • Improved dependency management for independent releases
-      • Enhanced C# 12 idiomatic code patterns
+      ✨ New Major Features:
 
-      🔄 Previous Features (from v1.0.2):
-      • Fixed cache preset expiry times not being respected
+      • Generic Caching Namespace (Reliable.HttpClient.Caching.Generic)
+      • Type-safe CachedHttpClient&lt;T&gt; for specific response types
+      • Compile-time type safety with improved performance
+      • Separate namespace organization: Generic vs Universal caching approaches
+      • Enhanced extension methods with "Generic" prefixes for clear API distinction
+
+      🏗️ Architecture Improvements:
+
+      • Clear separation between Generic (type-safe) and Universal (multi-type) caching
+      • Namespace restructuring for better developer experience
+      • Comprehensive documentation and choosing guides
+
+      🔄 Backward Compatibility:
+
+      • All existing Universal caching APIs remain unchanged
+      • Existing code continues to work without modifications
+      • Migration path available for those wanting type-safe benefits
+
+      📖 Documentation:
+
+      • Complete architecture guide and decision framework
+      • Real-world examples and common scenarios
+      • Migration guidance for different use cases
     </PackageReleaseNotes>
     <Authors>Andrey Krisanov</Authors>
     <Company></Company>
-    <Description>Intelligent HTTP response caching for Reliable.HttpClient with preset-based
+    <Description>Intelligent HTTP response caching for Reliable.HttpClient with two distinct
+      approaches: Generic type-safe caching (CachedHttpClient&lt;T&gt;) for specific response types
+      and Universal caching (HttpClientWithCache) for multi-type scenarios. Features preset-based
       configuration, automatic memory management, and zero-setup convenience methods.</Description>
-    <PackageTags>httpclient;caching;resilience;memory-cache;presets;zero-config;dotnet</PackageTags>
+    <PackageTags>
+      httpclient;caching;resilience;memory-cache;presets;zero-config;dotnet;generic;type-safe;universal</PackageTags>
     <RepositoryUrl>https://github.com/akrisanov/Reliable.HttpClient</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
@@ -43,12 +64,12 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.8" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.8" />
     <!-- For release: uncomment PackageReference and comment out ProjectReference -->
-    <!-- <PackageReference Include="Reliable.HttpClient" Version="1.1.0" /> -->
+    <PackageReference Include="Reliable.HttpClient" Version="1.1.0" />
   </ItemGroup>
 
   <ItemGroup>
     <!-- For development and testing: use ProjectReference -->
-    <ProjectReference Include="../Reliable.HttpClient/Reliable.HttpClient.csproj" />
+    <!-- <ProjectReference Include="../Reliable.HttpClient/Reliable.HttpClient.csproj" /> -->
   </ItemGroup>
 
   <ItemGroup>

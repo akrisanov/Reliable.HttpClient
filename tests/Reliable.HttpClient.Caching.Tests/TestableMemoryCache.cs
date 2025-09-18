@@ -1,5 +1,3 @@
-#pragma warning disable MA0048 // File name must match type name
-
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Primitives;
 
@@ -132,5 +130,3 @@ internal class TestableCacheEntry : ICacheEntry
         }
     }
 }
-
-#pragma warning restore MA0048

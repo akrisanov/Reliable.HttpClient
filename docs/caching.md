@@ -6,6 +6,22 @@ Learn how to add intelligent HTTP response caching to your resilient HttpClient 
 
 Reliable.HttpClient.Caching extends the core resilience features with intelligent HTTP response caching capabilities. It provides automatic response caching, cache invalidation, and custom cache providers.
 
+## 🏗️ Caching Architecture
+
+We provide two distinct caching approaches to meet different needs:
+
+### 🎯 Generic Caching (Type-Safe)
+- **Namespace**: `Reliable.HttpClient.Caching.Generic`
+- **Best for**: Known response types, compile-time safety
+- **Key class**: `CachedHttpClient<TResponse>`
+
+### 🌐 Universal Caching (Multi-Type)
+- **Namespace**: `Reliable.HttpClient.Caching`
+- **Best for**: Multiple response types, flexible scenarios
+- **Key class**: `HttpClientWithCache`
+
+> 📖 **[Choosing the Right Approach →](choosing-approach.md)** - Detailed comparison and decision guide
+
 ## Installation
 
 ```bash
@@ -18,48 +34,76 @@ dotnet add package Reliable.HttpClient.Caching
 
 ## Quick Start
 
-### 🚀 New: Preset-Based Configuration (Recommended)
+### 🎯 Generic Caching (Type-Safe) - Recommended for Known Types
 
-The easiest way to add caching with resilience in one line:
+Perfect when you have well-defined response types:
 
 ```csharp
-// Zero configuration - just add resilience with caching
+using Reliable.HttpClient.Caching.Generic;
+using Reliable.HttpClient.Caching.Generic.Extensions;
+
+// Register generic caching for specific type
 services.AddHttpClient<WeatherApiClient>()
-    .AddResilienceWithMediumTermCache<WeatherResponse>(); // 10 minutes cache
+    .AddResilienceWithGenericMediumTermCache<WeatherResponse>(); // 10 minutes cache
+
+// Or just caching without resilience
+services.AddGenericHttpClientCaching<WeatherResponse>();
+
+// Use in your service
+public class WeatherService(CachedHttpClient<WeatherResponse> client)
+{
+    public async Task<WeatherResponse> GetWeatherAsync(string city) =>
+        await client.GetFromJsonAsync($"/weather?city={city}");
+}
 ```
+
+### 🌐 Universal Caching (Multi-Type) - For Flexible Scenarios
+
+Perfect when you work with multiple response types:
+
+```csharp
+using Reliable.HttpClient.Caching;
+
+// Register universal caching
+services.AddHttpClientWithCache();
+
+// Use in your service
+public class ApiService(IHttpClientWithCache client)
+{
+    public async Task<WeatherResponse> GetWeatherAsync(string city) =>
+        await client.GetAsync<WeatherResponse>($"/weather?city={city}");
+
+    public async Task<UserProfile> GetUserAsync(int id) =>
+        await client.GetAsync<UserProfile>($"/users/{id}");
+}
+```
+
+### 🚀 Preset-Based Configuration (Both Approaches)
 
 Choose from ready-made presets for common scenarios:
 
 ```csharp
-// Short-term caching (1 minute) - for frequently changing data
+// Generic caching presets
 services.AddHttpClient<StockPriceClient>()
-    .AddShortTermCache<StockPrice>();
+    .AddShortTermCache<StockPrice>();               // 1 minute
 
-// Medium-term caching (10 minutes) - for moderately stable data
 services.AddHttpClient<NewsClient>()
-    .AddMediumTermCache<NewsArticle>();
+    .AddMediumTermCache<NewsArticle>();             // 10 minutes
 
-// Long-term caching (1 hour) - for stable data
 services.AddHttpClient<CountryClient>()
-    .AddLongTermCache<Country>();
+    .AddLongTermCache<Country>();                   // 1 hour
 
-// High-performance caching (5 minutes, large cache) - for high-traffic APIs
 services.AddHttpClient<PopularApiClient>()
-    .AddHighPerformanceCache<ApiResponse>();
+    .AddHighPerformanceCache<ApiResponse>();        // 5 minutes, large cache
 
-// Configuration caching (30 minutes) - for config data
 services.AddHttpClient<ConfigClient>()
-    .AddConfigurationCache<AppConfig>();
-
-// File downloads (2 hours) - for large files
-services.AddHttpClient<FileClient>()
-    .AddFileDownloadCache<FileResponse>();
+    .AddConfigurationCache<AppConfig>();            // 30 minutes
 ```
 
 ### Combined Resilience + Caching Presets
 
 ```csharp
-// Resilience with preset caching
+// Resilience with preset caching (Generic approach)
 services.AddHttpClient<ApiClient>()
     .AddResilienceWithShortTermCache<ApiResponse>(); // 1 minute
 

@@ -11,6 +11,8 @@
     <TargetFramework>net9.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <!-- Disable MA0048 for test projects - file name doesn't need to match type name -->
+    <NoWarn>$(NoWarn);MA0048</NoWarn>
   </PropertyGroup>
 
   <!-- Common properties for library projects -->

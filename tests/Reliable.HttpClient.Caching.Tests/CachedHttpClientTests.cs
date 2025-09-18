@@ -1,7 +1,5 @@
 using System.Net;
-using System.Net.Http;
 using System.Text;
-using System.Text.Json;
 
 using FluentAssertions;
 
@@ -12,6 +10,7 @@ using Moq;
 using Moq.Protected;
 
 using Reliable.HttpClient.Caching.Abstractions;
+using Reliable.HttpClient.Caching.Generic;
 
 using NetHttpClient = System.Net.Http.HttpClient;
 
@@ -68,7 +67,7 @@ public class CachedHttpClientTests : IDisposable
                   .ReturnsAsync(cachedResponse);
 
         // Act
-        var result = await _cachedClient.SendAsync(request,
+        TestResponse result = await _cachedClient.SendAsync(request,
             response => Task.FromResult(new TestResponse { Id = 2, Name = "Fresh" }));
 
         // Assert
@@ -94,7 +93,7 @@ public class CachedHttpClientTests : IDisposable
 
         var httpResponse = new HttpResponseMessage(HttpStatusCode.OK)
         {
-            Content = new StringContent("{\"id\":2,\"name\":\"Fresh\"}")
+            Content = new StringContent("{\"id\":2,\"name\":\"Fresh\"}"),
         };
 
         _mockHandler.Protected()
@@ -132,7 +131,7 @@ public class CachedHttpClientTests : IDisposable
                    .ReturnsAsync(httpResponse);
 
         // Act
-        var result = await _cachedClient.SendAsync(request,
+        TestResponse result = await _cachedClient.SendAsync(request,
             response => Task.FromResult(freshResponse));
 
         // Assert
@@ -238,7 +237,7 @@ public class CachedHttpClientTests : IDisposable
     public void Constructor_WithNullHttpClient_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var action = () => new CachedHttpClient<TestResponse>(
+        Func<CachedHttpClient<TestResponse>> action = () => new CachedHttpClient<TestResponse>(
             null!,
             _mockCache.Object,
             _optionsSnapshot,
@@ -251,7 +250,7 @@ public class CachedHttpClientTests : IDisposable
     public void Constructor_WithNullCache_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var action = () => new CachedHttpClient<TestResponse>(
+        Func<CachedHttpClient<TestResponse>> action = () => new CachedHttpClient<TestResponse>(
             _httpClient,
             null!,
             _optionsSnapshot,
@@ -264,7 +263,7 @@ public class CachedHttpClientTests : IDisposable
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var action = () => new CachedHttpClient<TestResponse>(
+        Func<CachedHttpClient<TestResponse>> action = () => new CachedHttpClient<TestResponse>(
             _httpClient,
             _mockCache.Object,
             _optionsSnapshot,
@@ -276,6 +275,7 @@ public class CachedHttpClientTests : IDisposable
     public void Dispose()
     {
         _httpClient?.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     public class TestResponse

@@ -5,12 +5,14 @@ using Microsoft.Extensions.Options;
 
 using Reliable.HttpClient.Caching.Abstractions;
 
-namespace Reliable.HttpClient.Caching;
+namespace Reliable.HttpClient.Caching.Generic;
 
 /// <summary>
-/// Cached wrapper for HttpClient that caches responses
+/// Generic cached wrapper for HttpClient that caches responses of specific type.
+/// This is the recommended approach when you need type-safe caching for specific response types.
+/// For universal caching across multiple types, consider using HttpClientWithCache from the parent namespace.
 /// </summary>
-/// <typeparam name="TResponse">Response type</typeparam>
+/// <typeparam name="TResponse">Response type to cache</typeparam>
 public class CachedHttpClient<TResponse>(
     System.Net.Http.HttpClient httpClient,
     IHttpResponseCache<TResponse> cache,

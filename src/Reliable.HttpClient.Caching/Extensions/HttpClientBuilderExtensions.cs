@@ -1,84 +1,21 @@
 using System.Net;
 
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 
 using Reliable.HttpClient.Caching.Abstractions;
-using Reliable.HttpClient.Caching.Providers;
+using Reliable.HttpClient.Caching.Generic.Extensions;
 
 namespace Reliable.HttpClient.Caching.Extensions;
 
 /// <summary>
-/// Extension methods for adding HTTP caching to HttpClient
+/// Extension methods for adding universal HTTP caching to HttpClient.
+/// For generic/type-safe caching, use extensions from Reliable.HttpClient.Caching.Generic.Extensions namespace.
 /// </summary>
 public static class HttpClientBuilderExtensions
 {
-    /// <summary>
-    /// Adds memory caching to HttpClient with automatic dependency registration
-    /// </summary>
-    /// <typeparam name="TResponse">Response type to cache</typeparam>
-    /// <param name="builder">HttpClient builder</param>
-    /// <param name="configureOptions">Configure cache options</param>
-    /// <returns>HttpClient builder for chaining</returns>
-    public static IHttpClientBuilder AddMemoryCache<TResponse>(
-        this IHttpClientBuilder builder,
-        Action<HttpCacheOptions>? configureOptions = null)
-    {
-        // Register cache options using Options pattern with client name
-        if (configureOptions is not null)
-        {
-            builder.Services.Configure(builder.Name, configureOptions);
-        }
-
-        // Register memory cache if not already registered (automatic dependency registration)
-        builder.Services.TryAddSingleton<IMemoryCache, MemoryCache>();
-
-        // Register cache key generator if not already registered
-        builder.Services.TryAddSingleton<ICacheKeyGenerator, DefaultCacheKeyGenerator>();
-
-        // Register cache provider as scoped (one per request/scope)
-        builder.Services.TryAddScoped<IHttpResponseCache<TResponse>, MemoryCacheProvider<TResponse>>();
-
-        // Register cached HTTP client as scoped
-        builder.Services.TryAddScoped<CachedHttpClient<TResponse>>();
-
-        return builder;
-    }
 
     /// <summary>
-    /// Adds custom cache provider to HttpClient
-    /// </summary>
-    /// <typeparam name="TResponse">Response type to cache</typeparam>
-    /// <typeparam name="TCacheProvider">Cache provider type</typeparam>
-    /// <param name="builder">HttpClient builder</param>
-    /// <param name="configureOptions">Configure cache options</param>
-    /// <returns>HttpClient builder for chaining</returns>
-    public static IHttpClientBuilder AddCache<TResponse, TCacheProvider>(
-        this IHttpClientBuilder builder,
-        Action<HttpCacheOptions>? configureOptions = null)
-        where TCacheProvider : class, IHttpResponseCache<TResponse>
-    {
-        // Register cache options using Options pattern with client name
-        if (configureOptions is not null)
-        {
-            builder.Services.Configure(builder.Name, configureOptions);
-        }
-
-        // Register cache key generator if not already registered
-        builder.Services.TryAddSingleton<ICacheKeyGenerator, DefaultCacheKeyGenerator>();
-
-        // Register custom cache provider as scoped
-        builder.Services.TryAddScoped<IHttpResponseCache<TResponse>, TCacheProvider>();
-
-        // Register cached HTTP client as scoped
-        builder.Services.TryAddScoped<CachedHttpClient<TResponse>>();
-
-        return builder;
-    }
-
-    /// <summary>
-    /// Adds memory caching with a predefined preset
+    /// Adds memory caching with a predefined preset using generic caching
     /// </summary>
     /// <typeparam name="TResponse">Response type to cache</typeparam>
     /// <param name="builder">HttpClient builder</param>
@@ -88,7 +25,7 @@ public static class HttpClientBuilderExtensions
         this IHttpClientBuilder builder,
         HttpCacheOptions preset)
     {
-        return builder.AddMemoryCache<TResponse>(options => CopyPresetToOptions(preset, options));
+        return builder.AddGenericMemoryCache<TResponse>(options => CopyPresetToOptions(preset, options));
     }
 
     /// <summary>
@@ -125,7 +62,7 @@ public static class HttpClientBuilderExtensions
     }
 
     /// <summary>
-    /// Adds short-term memory caching (1 minute expiry)
+    /// Adds short-term memory caching (1 minute expiry) using generic caching
     /// </summary>
     /// <typeparam name="TResponse">Response type to cache</typeparam>
     /// <param name="builder">HttpClient builder</param>
@@ -134,7 +71,7 @@ public static class HttpClientBuilderExtensions
         => builder.AddMemoryCache<TResponse>(CachePresets.ShortTerm);
 
     /// <summary>
-    /// Adds medium-term memory caching (10 minutes expiry)
+    /// Adds medium-term memory caching (10 minutes expiry) using generic caching
     /// </summary>
     /// <typeparam name="TResponse">Response type to cache</typeparam>
     /// <param name="builder">HttpClient builder</param>
@@ -143,7 +80,7 @@ public static class HttpClientBuilderExtensions
         => builder.AddMemoryCache<TResponse>(CachePresets.MediumTerm);
 
     /// <summary>
-    /// Adds long-term memory caching (1 hour expiry)
+    /// Adds long-term memory caching (1 hour expiry) using generic caching
     /// </summary>
     /// <typeparam name="TResponse">Response type to cache</typeparam>
     /// <param name="builder">HttpClient builder</param>
@@ -152,7 +89,7 @@ public static class HttpClientBuilderExtensions
         => builder.AddMemoryCache<TResponse>(CachePresets.LongTerm);
 
     /// <summary>
-    /// Adds high-performance memory caching (5 minutes expiry, larger cache)
+    /// Adds high-performance memory caching (5 minutes expiry, larger cache) using generic caching
     /// </summary>
     /// <typeparam name="TResponse">Response type to cache</typeparam>
     /// <param name="builder">HttpClient builder</param>
@@ -161,7 +98,7 @@ public static class HttpClientBuilderExtensions
         => builder.AddMemoryCache<TResponse>(CachePresets.HighPerformance);
 
     /// <summary>
-    /// Adds configuration data caching (30 minutes expiry)
+    /// Adds configuration data caching (30 minutes expiry) using generic caching
     /// </summary>
     /// <typeparam name="TResponse">Response type to cache</typeparam>
     /// <param name="builder">HttpClient builder</param>
@@ -170,7 +107,7 @@ public static class HttpClientBuilderExtensions
         => builder.AddMemoryCache<TResponse>(CachePresets.Configuration);
 
     /// <summary>
-    /// Adds both resilience policies and memory caching in one call
+    /// Adds both resilience policies and memory caching in one call using generic caching
     /// </summary>
     /// <typeparam name="TResponse">Response type to cache</typeparam>
     /// <param name="builder">HttpClient builder</param>
@@ -184,7 +121,7 @@ public static class HttpClientBuilderExtensions
     {
         return builder
             .AddResilience(configureResilience)
-            .AddMemoryCache<TResponse>(configureCache);
+            .AddGenericMemoryCache<TResponse>(configureCache);
     }
 
     /// <summary>

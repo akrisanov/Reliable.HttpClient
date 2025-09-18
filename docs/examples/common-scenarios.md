@@ -463,18 +463,204 @@ public class LeadService
 
 ---
 
+## Product Catalog Service
+
+**Business Context**: High-performance e-commerce catalog serving thousands of product requests per second.
+
+**Caching Strategy**: Type-safe generic caching for known product types with optimized serialization.
+
+```csharp
+using Reliable.HttpClient.Caching.Generic;
+using Reliable.HttpClient.Caching.Generic.Extensions;
+
+public class Startup
+{
+    public void ConfigureServices(IServiceCollection services)
+    {
+        // Product API - high performance with type-safe caching
+        services.AddHttpClient<ProductApiClient>()
+            .AddResilience(HttpClientPresets.FastInternalApi())
+            .AddGenericMemoryCache<Product>(options =>
+            {
+                options.DefaultExpiry = TimeSpan.FromMinutes(15);
+                options.MaxCacheSize = 10000; // Large cache for popular products
+            });
+
+        // Category API - longer cache for stable data
+        services.AddGenericHttpClientCaching<Category>(options =>
+        {
+            options.DefaultExpiry = TimeSpan.FromHours(2);
+        });
+
+        // Inventory API - short cache for dynamic data
+        services.AddGenericHttpClientCaching<InventoryLevel>(options =>
+        {
+            options.DefaultExpiry = TimeSpan.FromMinutes(1);
+        });
+    }
+}
+
+// Type-safe product service
+public class ProductService
+{
+    private readonly CachedHttpClient<Product> _productClient;
+    private readonly CachedHttpClient<Category> _categoryClient;
+    private readonly CachedHttpClient<InventoryLevel> _inventoryClient;
+
+    public ProductService(
+        CachedHttpClient<Product> productClient,
+        CachedHttpClient<Category> categoryClient,
+        CachedHttpClient<InventoryLevel> inventoryClient)
+    {
+        _productClient = productClient;
+        _categoryClient = categoryClient;
+        _inventoryClient = inventoryClient;
+    }
+
+    public async Task<ProductDetails> GetProductDetailsAsync(int productId)
+    {
+        // All requests are cached with optimal serialization
+        var product = await _productClient.GetFromJsonAsync($"/products/{productId}");
+        var category = await _categoryClient.GetFromJsonAsync($"/categories/{product.CategoryId}");
+        var inventory = await _inventoryClient.GetFromJsonAsync($"/inventory/{productId}");
+
+        return new ProductDetails(product, category, inventory);
+    }
+}
+
+// Well-defined DTOs for optimal caching
+public record Product(int Id, string Name, decimal Price, int CategoryId, string Description);
+public record Category(int Id, string Name, string Description);
+public record InventoryLevel(int ProductId, int Available, int Reserved);
+public record ProductDetails(Product Product, Category Category, InventoryLevel Inventory);
+```
+
+**Key Benefits**:
+
+- **Type Safety**: Compile-time checking for all cached responses
+- **Performance**: Optimized serialization without boxing/unboxing
+- **Memory Efficiency**: Type-specific cache storage
+- **Scalability**: Handles high-traffic scenarios efficiently
+
+---
+
+## Configuration Service
+
+**Business Context**: Centralized configuration service providing application settings with fallback support.
+
+**Caching Strategy**: Universal caching for flexible configuration types with long cache durations.
+
+```csharp
+using Reliable.HttpClient.Caching;
+
+public class Startup
+{
+    public void ConfigureServices(IServiceCollection services)
+    {
+        // Configuration API - universal caching for multiple config types
+        services.AddHttpClientWithCache(options =>
+        {
+            options.DefaultExpiry = TimeSpan.FromMinutes(30); // Long cache for stable config
+        });
+
+        services.AddSingleton<IConfigurationService, ConfigurationService>();
+    }
+}
+
+// Universal configuration service
+public class ConfigurationService : IConfigurationService
+{
+    private readonly IHttpClientWithCache _client;
+    private readonly ILogger<ConfigurationService> _logger;
+
+    public ConfigurationService(IHttpClientWithCache client, ILogger<ConfigurationService> logger)
+    {
+        _client = client;
+        _logger = logger;
+    }
+
+    public async Task<T> GetConfigAsync<T>(string key, T fallback = default) where T : class
+    {
+        try
+        {
+            return await _client.GetAsync<T>($"/config/{key}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to get config {Key}, using fallback", key);
+            return fallback ?? throw new ConfigurationException($"No fallback for {key}");
+        }
+    }
+
+    public async Task<bool> UpdateConfigAsync<T>(string key, T value) where T : class
+    {
+        try
+        {
+            await _client.PostAsync<T, object>($"/config/{key}", value);
+
+            // Invalidate cache after update
+            await _client.InvalidateCacheAsync($"*{key}*");
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update config {Key}", key);
+            return false;
+        }
+    }
+}
+
+// Usage in business services
+public class EmailService
+{
+    private readonly IConfigurationService _config;
+
+    public EmailService(IConfigurationService config)
+    {
+        _config = config;
+    }
+
+    public async Task SendEmailAsync(string to, string subject, string body)
+    {
+        // Configuration cached for 30 minutes
+        var smtpConfig = await _config.GetConfigAsync<SmtpConfig>("smtp", new SmtpConfig
+        {
+            Host = "localhost",
+            Port = 587,
+            EnableSsl = false
+        });
+
+        // Use configuration...
+    }
+}
+
+public record SmtpConfig(string Host, int Port, bool EnableSsl, string Username, string Password);
+public record DatabaseConfig(string ConnectionString, int CommandTimeout, int MaxRetries);
+public record FeatureFlags(bool EnableNewUi, bool EnableBetaFeatures, string ApiVersion);
+```
+
+**Key Benefits**:
+
+- **Flexibility**: Works with any configuration type
+- **Fallback Support**: Graceful degradation when config service is unavailable
+- **Cache Invalidation**: Automatic cache refresh on configuration updates
+- **Simple Integration**: Easy to use across all application services
+
+---
+
 ## Summary
 
 Each business scenario requires different resilience and caching strategies:
 
-| Scenario                | Primary Concern      | Recommended Preset              | Key Customization           |
+| Scenario                | Primary Concern      | Recommended Preset              | Caching Approach            |
 |-------------------------|----------------------|---------------------------------|-----------------------------|
-| **E-commerce Payments** | Zero downtime        | `SlowExternalApi()`             | Higher retry count          |
-| **Microservices**       | Service isolation    | `FastInternalApi()`             | Vary by criticality         |
-| **External APIs**       | Rate limit handling  | `SlowExternalApi()`             | Longer delays               |
-| **Legacy Systems**      | Maximum patience     | Custom builder                  | Very high tolerance         |
-| **Product Catalog**     | Performance          | `FastInternalApi()` + Caching   | Tiered cache strategy       |
-| **Configuration**       | System stability     | `FastInternalApi()` + Caching   | Fallback data               |
+| **E-commerce Payments** | Zero downtime        | `SlowExternalApi()`             | No caching (critical data)  |
+| **Microservices**       | Service isolation    | `FastInternalApi()`             | Vary by service criticality |
+| **External APIs**       | Rate limit handling  | `SlowExternalApi()`             | Longer cache (reduce calls) |
+| **Legacy Systems**      | Maximum patience     | Custom builder                  | Aggressive caching          |
+| **Product Catalog**     | Performance          | `FastInternalApi()` + Generic   | Type-safe, optimized cache  |
+| **Configuration**       | System stability     | `FastInternalApi()` + Universal | Flexible, fallback support |
 | **Universal REST API**  | Maintainability      | Universal handlers              | Single registration pattern |
 
 > 💡 **Next Steps**: See [Configuration Examples](configuration-examples.md) for detailed configuration patterns and techniques.

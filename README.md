@@ -26,9 +26,9 @@ Based on [Polly](https://github.com/App-vNext/Polly) but with zero configuration
 
 | Your Use Case | Recommended Approach | Documentation |
 |---------------|---------------------|---------------|
-| **Single API with 1-2 entity types** | Traditional Generic | [Getting Started](docs/getting-started.md) |
-| **REST API with 5+ entity types** | Universal Handlers | [Common Scenarios - Universal REST API](docs/examples/common-scenarios.md#universal-rest-api-client) |
-| **Need HttpClient substitution** | IHttpClientAdapter | [HttpClient Substitution](docs/examples/http-client-substitution.md) |
+| **Single API with 1-2 entity types** | Generic Caching | [Getting Started](docs/getting-started.md) |
+| **REST API with 5+ entity types** | Universal Handlers | [Choosing Guide](docs/choosing-approach.md#multi-entity-rest-api--use-universal-caching) |
+| **Need HttpClient substitution** | IHttpClientAdapter | [Substitution Guide](docs/examples/http-client-substitution.md) |
 | **Custom serialization/error handling** | Custom Response Handler | [Advanced Usage](docs/advanced-usage.md) |
 
 ## Packages
@@ -105,7 +105,8 @@ Organizations using Reliable.HttpClient in production:
 ## Documentation
 
 - [Getting Started Guide](docs/getting-started.md) - Step-by-step setup
-- [Common Scenarios](docs/examples/common-scenarios.md) - Real-world examples 🆕
+- [Choosing Your Approach](docs/choosing-approach.md) - Which pattern fits your use case
+- [Common Scenarios](docs/examples/common-scenarios.md) - Real-world examples
 - [Configuration Reference](docs/configuration.md) - Complete options
 - [Advanced Usage](docs/advanced-usage.md) - Advanced patterns
 - [HTTP Caching Guide](docs/caching.md) - Caching documentation

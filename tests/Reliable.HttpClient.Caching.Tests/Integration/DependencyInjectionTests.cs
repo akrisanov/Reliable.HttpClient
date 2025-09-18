@@ -5,6 +5,8 @@ using Xunit;
 
 using Reliable.HttpClient.Caching.Abstractions;
 using Reliable.HttpClient.Caching.Extensions;
+using Reliable.HttpClient.Caching.Generic;
+using Reliable.HttpClient.Caching.Generic.Extensions;
 
 namespace Reliable.HttpClient.Caching.Tests.Integration;
 
@@ -20,7 +22,7 @@ public class DependencyInjectionTests
         services.AddHttpClient<TestApiClient>();
 
         // Act
-        services.AddHttpClientCaching<TestApiClient, ApiResponse>();
+        services.AddGenericHttpClientCaching<TestApiClient, ApiResponse>();
 
         ServiceProvider serviceProvider = services.BuildServiceProvider();
 
@@ -40,7 +42,7 @@ public class DependencyInjectionTests
         services.AddHttpClient<TestApiClient>();
 
         // Act
-        services.AddHttpClientCaching<TestApiClient, ApiResponse>(options =>
+        services.AddGenericHttpClientCaching<TestApiClient, ApiResponse>(options =>
         {
             options.DefaultExpiry = TimeSpan.FromMinutes(10);
             options.CacheableMethods.Add(HttpMethod.Post);
@@ -61,7 +63,7 @@ public class DependencyInjectionTests
         services.AddLogging();
         services.AddMemoryCache();
         services.AddHttpClient<TestApiClient>();
-        services.AddHttpClientCaching<TestApiClient, ApiResponse>();
+        services.AddGenericHttpClientCaching<TestApiClient, ApiResponse>();
 
         ServiceProvider serviceProvider = services.BuildServiceProvider();
 
@@ -81,7 +83,7 @@ public class DependencyInjectionTests
         services.AddLogging();
         services.AddMemoryCache();
         services.AddHttpClient<TestApiClient>();
-        services.AddHttpClientCaching<TestApiClient, ApiResponse>();
+        services.AddGenericHttpClientCaching<TestApiClient, ApiResponse>();
 
         ServiceProvider serviceProvider = services.BuildServiceProvider();
 
@@ -101,7 +103,7 @@ public class DependencyInjectionTests
         services.AddLogging();
         services.AddMemoryCache();
         services.AddHttpClient<TestApiClient>();
-        services.AddHttpClientCaching<TestApiClient, ApiResponse>();
+        services.AddGenericHttpClientCaching<TestApiClient, ApiResponse>();
 
         ServiceProvider serviceProvider = services.BuildServiceProvider();
 
@@ -124,8 +126,8 @@ public class DependencyInjectionTests
         services.AddHttpClient<AnotherApiClient>();
 
         // Act
-        services.AddHttpClientCaching<TestApiClient, ApiResponse>();
-        services.AddHttpClientCaching<AnotherApiClient, AnotherResponse>();
+        services.AddGenericHttpClientCaching<TestApiClient, ApiResponse>();
+        services.AddGenericHttpClientCaching<AnotherApiClient, AnotherResponse>();
 
         ServiceProvider serviceProvider = services.BuildServiceProvider();
 
@@ -146,7 +148,7 @@ public class DependencyInjectionTests
         services.AddLogging();
         services.AddMemoryCache();
         services.AddHttpClient<TestApiClient>();
-        services.AddHttpClientCaching<TestApiClient, ApiResponse>();
+        services.AddGenericHttpClientCaching<TestApiClient, ApiResponse>();
 
         ServiceProvider serviceProvider = services.BuildServiceProvider();
 
@@ -181,7 +183,7 @@ public class DependencyInjectionTests
         // Note: Not adding HttpClient
 
         // Act
-        services.AddHttpClientCaching<TestApiClient, ApiResponse>();
+        services.AddGenericHttpClientCaching<TestApiClient, ApiResponse>();
         ServiceProvider serviceProvider = services.BuildServiceProvider();
 
         // Assert
@@ -199,7 +201,7 @@ public class DependencyInjectionTests
         // Note: Not adding MemoryCache
 
         // Act & Assert
-        Func<IServiceCollection> action = () => services.AddHttpClientCaching<TestApiClient, ApiResponse>();
+        Func<IServiceCollection> action = () => services.AddGenericHttpClientCaching<TestApiClient, ApiResponse>();
         action.Should().Throw<ArgumentException>()
             .WithMessage("*IMemoryCache is not registered*");
     }

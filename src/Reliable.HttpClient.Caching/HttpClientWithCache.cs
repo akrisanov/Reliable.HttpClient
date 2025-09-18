@@ -8,7 +8,9 @@ using Reliable.HttpClient.Caching.Abstractions;
 namespace Reliable.HttpClient.Caching;
 
 /// <summary>
-/// Universal HTTP client with caching implementation
+/// Universal HTTP client with caching implementation that can handle multiple response types.
+/// This is the recommended approach when you need caching across different response types in a single client.
+/// For type-safe caching of specific response types, consider using CachedHttpClient&lt;T&gt; from Reliable.HttpClient.Caching.Generic namespace.
 /// </summary>
 /// <param name="httpClient">HTTP client instance</param>
 /// <param name="cache">Memory cache instance</param>

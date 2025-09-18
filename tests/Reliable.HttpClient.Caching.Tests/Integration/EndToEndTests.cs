@@ -10,6 +10,8 @@ using Microsoft.Extensions.Options;
 
 using Reliable.HttpClient.Caching.Abstractions;
 using Reliable.HttpClient.Caching.Extensions;
+using Reliable.HttpClient.Caching.Generic;
+using Reliable.HttpClient.Caching.Generic.Extensions;
 
 using NetHttpClient = System.Net.Http.HttpClient;
 
@@ -32,7 +34,7 @@ public class EndToEndTests : IDisposable
         services.AddMemoryCache();
         services.AddHttpClient<TestApiClient>()
                 .ConfigurePrimaryHttpMessageHandler(() => _mockHandler);
-        services.AddHttpClientCaching<TestApiClient, TestResponse>();
+        services.AddGenericHttpClientCaching<TestApiClient, TestResponse>();
 
         _serviceProvider = services.BuildServiceProvider();
 

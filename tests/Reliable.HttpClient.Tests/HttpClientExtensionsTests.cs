@@ -1,5 +1,3 @@
-#pragma warning disable MA0048 // File name must match type name
-
 using System.Net;
 
 using FluentAssertions;
@@ -290,4 +288,3 @@ public class MockHttpMessageHandler : HttpMessageHandler
     }
 }
 
-#pragma warning restore MA0048
