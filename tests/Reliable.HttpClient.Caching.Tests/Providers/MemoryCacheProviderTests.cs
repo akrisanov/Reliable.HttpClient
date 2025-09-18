@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 using FluentAssertions;
 
 using Microsoft.Extensions.Caching.Memory;
@@ -39,7 +37,7 @@ public class MemoryCacheProviderTests : IDisposable
         var key = "non-existent-key";
 
         // Act
-        var result = await _provider.GetAsync(key, CancellationToken.None);
+        TestResponse? result = await _provider.GetAsync(key, CancellationToken.None);
 
         // Assert
         result.Should().BeNull();
@@ -55,7 +53,7 @@ public class MemoryCacheProviderTests : IDisposable
 
         // Act
         await _provider.SetAsync(key, value, expiry, CancellationToken.None);
-        var result = await _provider.GetAsync(key, CancellationToken.None);
+        TestResponse? result = await _provider.GetAsync(key, CancellationToken.None);
 
         // Assert
         result.Should().NotBeNull();
@@ -67,13 +65,12 @@ public class MemoryCacheProviderTests : IDisposable
     public async Task SetAsync_WithZeroExpiry_DoesNotStoreValue()
     {
         // Arrange
-        var key = "test-key";
         var value = new TestResponse { Id = 1, Name = "Test" };
-        var expiry = TimeSpan.Zero;
+        TimeSpan expiry = TimeSpan.Zero;
 
         // Act
-        await _provider.SetAsync(key, value, expiry, CancellationToken.None);
-        var result = await _provider.GetAsync(key, CancellationToken.None);
+        await _provider.SetAsync("test-key", value, expiry, CancellationToken.None);
+        TestResponse? result = await _provider.GetAsync("test-key", CancellationToken.None);
 
         // Assert
         result.Should().BeNull();
@@ -89,7 +86,7 @@ public class MemoryCacheProviderTests : IDisposable
 
         // Act
         await _provider.SetAsync(key, value, expiry, CancellationToken.None);
-        var result = await _provider.GetAsync(key, CancellationToken.None);
+        TestResponse? result = await _provider.GetAsync(key, CancellationToken.None);
 
         // Assert
         result.Should().BeNull();
@@ -105,10 +102,10 @@ public class MemoryCacheProviderTests : IDisposable
 
         // Act
         await _provider.SetAsync(key, value, expiry, CancellationToken.None);
-        var beforeRemove = await _provider.GetAsync(key, CancellationToken.None);
+        TestResponse? beforeRemove = await _provider.GetAsync(key, CancellationToken.None);
 
         await _provider.RemoveAsync(key, CancellationToken.None);
-        var afterRemove = await _provider.GetAsync(key, CancellationToken.None);
+        TestResponse? afterRemove = await _provider.GetAsync(key, CancellationToken.None);
 
         // Assert
         beforeRemove.Should().NotBeNull();
@@ -122,7 +119,7 @@ public class MemoryCacheProviderTests : IDisposable
         var key = "non-existent-key";
 
         // Act & Assert
-        var action = () => _provider.RemoveAsync(key, CancellationToken.None);
+        Func<Task> action = () => _provider.RemoveAsync(key, CancellationToken.None);
         await action.Should().NotThrowAsync();
     }
 
@@ -140,13 +137,13 @@ public class MemoryCacheProviderTests : IDisposable
         await _provider.SetAsync(key1, value1, expiry, CancellationToken.None);
         await _provider.SetAsync(key2, value2, expiry, CancellationToken.None);
 
-        var beforeClear1 = await _provider.GetAsync(key1, CancellationToken.None);
-        var beforeClear2 = await _provider.GetAsync(key2, CancellationToken.None);
+        TestResponse? beforeClear1 = await _provider.GetAsync(key1, CancellationToken.None);
+        TestResponse? beforeClear2 = await _provider.GetAsync(key2, CancellationToken.None);
 
         await _provider.ClearAsync(CancellationToken.None);
 
-        var afterClear1 = await _provider.GetAsync(key1, CancellationToken.None);
-        var afterClear2 = await _provider.GetAsync(key2, CancellationToken.None);
+        TestResponse? afterClear1 = await _provider.GetAsync(key1, CancellationToken.None);
+        TestResponse? afterClear2 = await _provider.GetAsync(key2, CancellationToken.None);
 
         // Assert
         beforeClear1.Should().NotBeNull();
@@ -163,7 +160,7 @@ public class MemoryCacheProviderTests : IDisposable
         var expiry = TimeSpan.FromMinutes(5);
 
         // Act & Assert
-        var action = () => _provider.SetAsync(null!, value, expiry, CancellationToken.None);
+        Func<Task> action = () => _provider.SetAsync(null!, value, expiry, CancellationToken.None);
         await action.Should().ThrowAsync<ArgumentException>();
     }
 
@@ -175,7 +172,7 @@ public class MemoryCacheProviderTests : IDisposable
         var expiry = TimeSpan.FromMinutes(5);
 
         // Act & Assert
-        var action = () => _provider.SetAsync("", value, expiry, CancellationToken.None);
+        Func<Task> action = () => _provider.SetAsync("", value, expiry, CancellationToken.None);
         await action.Should().ThrowAsync<ArgumentException>();
     }
 
@@ -183,7 +180,7 @@ public class MemoryCacheProviderTests : IDisposable
     public async Task GetAsync_WithNullKey_ThrowsArgumentException()
     {
         // Act & Assert
-        var action = () => _provider.GetAsync(null!, CancellationToken.None);
+        Func<Task> action = () => _provider.GetAsync(null!, CancellationToken.None);
         await action.Should().ThrowAsync<ArgumentException>();
     }
 
@@ -191,7 +188,7 @@ public class MemoryCacheProviderTests : IDisposable
     public async Task RemoveAsync_WithNullKey_ThrowsArgumentException()
     {
         // Act & Assert
-        var action = () => _provider.RemoveAsync(null!, CancellationToken.None);
+        Func<Task> action = () => _provider.RemoveAsync(null!, CancellationToken.None);
         await action.Should().ThrowAsync<ArgumentException>();
     }
 
@@ -204,7 +201,7 @@ public class MemoryCacheProviderTests : IDisposable
 
         // Act
         await _provider.SetAsync(key, null!, expiry, CancellationToken.None);
-        var result = await _provider.GetAsync(key, CancellationToken.None);
+        TestResponse? result = await _provider.GetAsync(key, CancellationToken.None);
 
         // Assert
         result.Should().BeNull();
@@ -221,10 +218,10 @@ public class MemoryCacheProviderTests : IDisposable
 
         // Act
         await _provider.SetAsync(key, value1, expiry, CancellationToken.None);
-        var first = await _provider.GetAsync(key, CancellationToken.None);
+        TestResponse? first = await _provider.GetAsync(key, CancellationToken.None);
 
         await _provider.SetAsync(key, value2, expiry, CancellationToken.None);
-        var second = await _provider.GetAsync(key, CancellationToken.None);
+        TestResponse? second = await _provider.GetAsync(key, CancellationToken.None);
 
         // Assert
         first!.Id.Should().Be(1);
@@ -237,6 +234,7 @@ public class MemoryCacheProviderTests : IDisposable
     public void Dispose()
     {
         _serviceProvider?.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     public class TestResponse

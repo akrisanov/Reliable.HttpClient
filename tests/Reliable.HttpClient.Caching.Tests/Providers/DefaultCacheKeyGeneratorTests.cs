@@ -122,8 +122,10 @@ public class DefaultCacheKeyGeneratorTests
     public void GenerateKey_WithRequestBody_IncludesBodyHashInKey()
     {
         // Arrange
-        var request = new HttpRequestMessage(HttpMethod.Post, "https://api.example.com/users");
-        request.Content = new StringContent("{\"name\":\"John\"}", Encoding.UTF8, "application/json");
+        var request = new HttpRequestMessage(HttpMethod.Post, "https://api.example.com/users")
+        {
+            Content = new StringContent("{\"name\":\"John\"}", Encoding.UTF8, "application/json"),
+        };
 
         // Act
         var key = _generator.GenerateKey(request);
@@ -173,7 +175,7 @@ public class DefaultCacheKeyGeneratorTests
     public void GenerateKey_WithNullRequest_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var action = () => _generator.GenerateKey(null!);
+        Func<string> action = () => _generator.GenerateKey(null!);
         action.Should().Throw<ArgumentNullException>();
     }
 

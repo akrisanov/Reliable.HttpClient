@@ -20,6 +20,17 @@
 A comprehensive resilience and caching ecosystem for HttpClient with built-in retry policies, circuit breakers, and intelligent response caching.
 Based on [Polly](https://github.com/App-vNext/Polly) but with zero configuration required.
 
+## 🎯 Choose Your Approach
+
+**Not sure which approach to use?** [→ Read our Choosing Guide](docs/choosing-approach.md)
+
+| Your Use Case | Recommended Approach | Documentation |
+|---------------|---------------------|---------------|
+| **Single API with 1-2 entity types** | Traditional Generic | [Getting Started](docs/getting-started.md) |
+| **REST API with 5+ entity types** | Universal Handlers | [Common Scenarios - Universal REST API](docs/examples/common-scenarios.md#universal-rest-api-client) |
+| **Need HttpClient substitution** | IHttpClientAdapter | [HttpClient Substitution](docs/examples/http-client-substitution.md) |
+| **Custom serialization/error handling** | Custom Response Handler | [Advanced Usage](docs/advanced-usage.md) |
+
 ## Packages
 
 | Package                           | Purpose                                  | Version                          |
@@ -39,104 +50,53 @@ Based on [Polly](https://github.com/App-vNext/Polly) but with zero configuration
 
 ## Quick Start
 
-### 1️⃣ Install & Add Resilience (2 lines of code)
-
 ```bash
 dotnet add package Reliable.HttpClient
 ```
 
 ```csharp
-builder.Services.AddHttpClient<WeatherApiClient>(c =>
+// Add to your Program.cs
+builder.Services.AddHttpClient<ApiClient>(c => c.BaseAddress = new Uri("https://api.example.com"))
+    .AddResilience(); // That's it! ✨
+
+// Use anywhere
+public class ApiClient(HttpClient client)
 {
-    c.BaseAddress = new Uri("https://api.weather.com");
-})
-.AddResilience(); // ✨ That's it! Zero configuration needed
-```
-
-**You now have:**
-
-- Automatic retries (3 attempts with smart backoff)
-- Circuit breaker (prevents cascading failures)
-- Smart error handling (5xx, timeouts, rate limits)
-
-### 2️⃣ Add Caching (Optional)
-
-Want to cache responses? Add one more package and line:
-
-```bash
-dotnet add package Reliable.HttpClient.Caching
-```
-
-```csharp
-builder.Services.AddMemoryCache(); // Standard .NET caching
-
-builder.Services.AddHttpClient<WeatherApiClient>(c =>
-{
-    c.BaseAddress = new Uri("https://api.weather.com");
-})
-.AddResilience()
-.AddMemoryCache<WeatherResponse>(); // ✨ Intelligent caching added!
-```
-
-**Now you also have:**
-
-- Automatic response caching (5-minute default)
-- Smart cache keys (collision-resistant SHA256)
-- Manual cache invalidation
-
-### 3️⃣ Use Your Client
-
-```csharp
-public class WeatherService
-{
-    private readonly HttpClient _client;
-
-    public WeatherService(IHttpClientFactory factory)
-    {
-        _client = factory.CreateClient<WeatherApiClient>();
-    }
-
-    public async Task<WeatherResponse> GetWeatherAsync(string city)
-    {
-        // This call now has retry, circuit breaker, AND caching!
-        var response = await _client.GetAsync($"/weather?city={city}");
-        return await response.Content.ReadFromJsonAsync<WeatherResponse>();
-    }
+    public async Task<Data> GetDataAsync() =>
+        await client.GetFromJsonAsync<Data>("/endpoint");
 }
 ```
 
-> 🎯 **That's it!** You're production-ready with 2-3 lines of configuration.
+**You now have:** Automatic retries + Circuit breaker + Smart error handling
 
-## What You Get
+> 🚀 **Need details?** See [Getting Started Guide](docs/getting-started.md) for step-by-step setup
+> 🆕 **Building REST APIs?** Check [Universal Response Handlers](docs/examples/common-scenarios.md#universal-rest-api-client)
+> 🔄 **Need substitution patterns?** See [HttpClient Substitution Guide](docs/examples/http-client-substitution.md)
 
-- ✅ **Retry Policy**: 3 attempts with exponential backoff + jitter
-- ✅ **Circuit Breaker**: Opens after 5 failures, stays open for 1 minute
-- ✅ **Smart Error Handling**: Retries on 5xx, 408, 429, and network errors
-- ✅ **HTTP Response Caching**: 5-minute default expiry with SHA256 cache keys
-- ✅ **Multiple Configuration Options**: Zero-config, presets, or custom setup
-- ✅ **Production Ready**: Used by companies in production environments
+## Key Features
 
-> 📖 **See [Key Features Table](docs/README.md#key-features) for complete feature comparison**
+✅ **Zero Configuration** - Works out of the box
+✅ **Resilience** - Retry + Circuit breaker
+✅ **Caching** - Intelligent HTTP response caching
+✅ **Universal Handlers** - Non-generic response handling for REST APIs
+✅ **HttpClient Substitution** - Switch between cached/non-cached implementations
+✅ **Production Ready** - Used by companies in production
 
-## Advanced Configuration (Optional)
+> 📖 **Full Feature List**: [Documentation](docs/README.md#key-features)
 
-Need custom settings? Multiple ways to configure:
+## Need Customization?
 
 ```csharp
-// Option 1: Traditional configuration
-builder.Services.AddHttpClient<ApiClient>()
-    .AddResilience(options => options.Retry.MaxRetries = 5);
+// Custom settings
+.AddResilience(options => options.Retry.MaxRetries = 5);
 
-// Option 2: Fluent builder
-builder.Services.AddHttpClient<ApiClient>()
-    .AddResilience(builder => builder.WithRetry(r => r.WithMaxRetries(5)));
-
-// Option 3: Ready-made presets
-builder.Services.AddHttpClient<ApiClient>()
-    .AddResilience(HttpClientPresets.SlowExternalApi());
+// Ready-made presets
+.AddResilience(HttpClientPresets.SlowExternalApi());
 ```
 
-> 📖 **See [Configuration Guide](docs/configuration.md) for complete configuration options**## Trusted By
+> 📖 **Full Configuration**: [Configuration Guide](docs/configuration.md)
+
+## Trusted By
 
 Organizations using Reliable.HttpClient in production:
 
@@ -144,56 +104,11 @@ Organizations using Reliable.HttpClient in production:
 
 ## Documentation
 
-- [Getting Started Guide](docs/getting-started.md) - Quick setup and basic usage
-- [Configuration Reference](docs/configuration.md) - Complete options reference
-- [Advanced Usage](docs/advanced-usage.md) - Advanced patterns and techniques
-- [HTTP Caching Guide](docs/caching.md) - Complete caching documentation
-- [Common Scenarios](docs/examples/common-scenarios.md) - Real-world examples
-- [Complete Feature List](docs/README.md#key-features) - Detailed feature comparison
-
-## Complete Example
-
-Here's a complete working example showing both packages in action:
-
-### The Service
-
-```csharp
-public class WeatherService
-{
-    private readonly HttpClient _httpClient;
-
-    public WeatherService(IHttpClientFactory httpClientFactory)
-    {
-        _httpClient = httpClientFactory.CreateClient<WeatherApiClient>();
-    }
-
-    public async Task<WeatherData> GetWeatherAsync(string city)
-    {
-        // This call has retry, circuit breaker, AND caching automatically!
-        var response = await _httpClient.GetAsync($"/weather?city={city}");
-        response.EnsureSuccessStatusCode();
-
-        return await response.Content.ReadFromJsonAsync<WeatherData>();
-    }
-}
-```
-
-### The Registration
-
-```csharp
-// In Program.cs
-services.AddMemoryCache();
-
-services.AddHttpClient<WeatherApiClient>(c =>
-{
-    c.BaseAddress = new Uri("https://api.weather.com");
-    c.DefaultRequestHeaders.Add("API-Key", "your-key");
-})
-.AddResilience()                    // Retry + Circuit breaker
-.AddMemoryCache<WeatherData>();     // Response caching
-```
-
-**That's it!** Production-ready HTTP client with resilience and caching in just a few lines. 🚀
+- [Getting Started Guide](docs/getting-started.md) - Step-by-step setup
+- [Common Scenarios](docs/examples/common-scenarios.md) - Real-world examples 🆕
+- [Configuration Reference](docs/configuration.md) - Complete options
+- [Advanced Usage](docs/advanced-usage.md) - Advanced patterns
+- [HTTP Caching Guide](docs/caching.md) - Caching documentation
 
 ## Contributing
 

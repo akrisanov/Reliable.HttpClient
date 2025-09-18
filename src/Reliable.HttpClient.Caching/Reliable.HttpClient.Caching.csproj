@@ -1,19 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net6.0;net8.0;net9.0</TargetFrameworks>
+    <!-- TargetFrameworks, LangVersion, ImplicitUsings, Nullable inherited from
+    Directory.Build.props -->
     <AssemblyName>Reliable.HttpClient.Caching</AssemblyName>
     <PackageId>Reliable.HttpClient.Caching</PackageId>
-    <Version>1.0.2</Version>
-    <PackageReleaseNotes>🐛 Bug Fix Release v1.0.2
+    <Version>1.0.3</Version>
+    <PackageReleaseNotes>🎉 v1.0.3 Release - Ready for Independent Release!
 
-      Fixed cache preset expiry times not being respected:
-      • AddMediumTermCache now correctly uses 10 minutes (was using 5 minutes)
-      • AddShortTermCache, AddLongTermCache, and other presets now use their documented expiry times
-      • GetExpiry function now properly references configured DefaultExpiry instead of hardcoded
-      fallback
-      • Cache-Control headers still take precedence over preset values
+      ✨ New Features:
+      • Compatible with Reliable.HttpClient v1.1.0 universal interface
+      • Improved dependency management for independent releases
+      • Enhanced C# 12 idiomatic code patterns
 
-      Breaking: None - this is a bug fix that corrects behavior to match documentation
+      🔄 Previous Features (from v1.0.2):
+      • Fixed cache preset expiry times not being respected
     </PackageReleaseNotes>
     <Authors>Andrey Krisanov</Authors>
     <Company></Company>
@@ -42,19 +42,16 @@
     <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.8" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.8" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.8" />
+    <!-- For release: uncomment PackageReference and comment out ProjectReference -->
+    <!-- <PackageReference Include="Reliable.HttpClient" Version="1.1.0" /> -->
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Reliable.HttpClient" Version="1.0.0" />
+    <!-- For development and testing: use ProjectReference -->
+    <ProjectReference Include="../Reliable.HttpClient/Reliable.HttpClient.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="/" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
-    <PackageReference Include="ErrorProne.NET.CoreAnalyzers" Version="0.8.2-beta.1"
-      PrivateAssets="All" />
   </ItemGroup>
 </Project>

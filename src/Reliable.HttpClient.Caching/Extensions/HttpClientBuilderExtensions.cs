@@ -1,3 +1,5 @@
+using System.Net;
+
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -97,8 +99,8 @@ public static class HttpClientBuilderExtensions
         options.DefaultExpiry = preset.DefaultExpiry;
         options.MaxCacheSize = preset.MaxCacheSize;
         options.KeyGenerator = preset.KeyGenerator;
-        options.CacheableStatusCodes = [.. preset.CacheableStatusCodes];
-        options.CacheableMethods = [.. preset.CacheableMethods];
+        options.CacheableStatusCodes = new HashSet<HttpStatusCode>(preset.CacheableStatusCodes);
+        options.CacheableMethods = new HashSet<HttpMethod>(preset.CacheableMethods);
         options.ShouldCache = preset.ShouldCache;
 
         // Create a new GetExpiry function that uses the correct DefaultExpiry
@@ -210,7 +212,7 @@ public static class HttpClientBuilderExtensions
     /// <param name="builder">HttpClient builder</param>
     /// <returns>HttpClient builder for chaining</returns>
     public static IHttpClientBuilder AddResilienceWithShortTermCache<TResponse>(this IHttpClientBuilder builder)
-        => builder.AddResilienceWithCaching<TResponse>(null, options => CopyPresetToOptions(CachePresets.ShortTerm, options));
+        => builder.AddResilienceWithCaching<TResponse>(configureResilience: null, options => CopyPresetToOptions(CachePresets.ShortTerm, options));
 
     /// <summary>
     /// Adds resilience with medium-term caching (10 minutes)
@@ -219,7 +221,7 @@ public static class HttpClientBuilderExtensions
     /// <param name="builder">HttpClient builder</param>
     /// <returns>HttpClient builder for chaining</returns>
     public static IHttpClientBuilder AddResilienceWithMediumTermCache<TResponse>(this IHttpClientBuilder builder)
-        => builder.AddResilienceWithCaching<TResponse>(null, options => CopyPresetToOptions(CachePresets.MediumTerm, options));
+        => builder.AddResilienceWithCaching<TResponse>(configureResilience: null, options => CopyPresetToOptions(CachePresets.MediumTerm, options));
 
     /// <summary>
     /// Adds resilience with long-term caching (1 hour)
@@ -228,72 +230,5 @@ public static class HttpClientBuilderExtensions
     /// <param name="builder">HttpClient builder</param>
     /// <returns>HttpClient builder for chaining</returns>
     public static IHttpClientBuilder AddResilienceWithLongTermCache<TResponse>(this IHttpClientBuilder builder)
-        => builder.AddResilienceWithCaching<TResponse>(null, options => CopyPresetToOptions(CachePresets.LongTerm, options));
-}
-
-/// <summary>
-/// Extension methods for ServiceCollection
-/// </summary>
-public static class ServiceCollectionExtensions
-{
-    /// <summary>
-    /// Adds HTTP caching services to the service collection
-    /// </summary>
-    /// <param name="services">Service collection</param>
-    /// <param name="configureOptions">Configure default cache options</param>
-    /// <returns>Service collection for chaining</returns>
-    public static IServiceCollection AddHttpCaching(
-        this IServiceCollection services,
-        Action<HttpCacheOptions>? configureOptions = null)
-    {
-        // Register default cache options
-        if (configureOptions is not null)
-        {
-            services.Configure(configureOptions);
-        }
-
-        // Register memory cache if not already registered
-        services.TryAddSingleton<IMemoryCache, MemoryCache>();
-
-        return services;
-    }
-
-    /// <summary>
-    /// Adds HTTP client caching for a specific HTTP client and response type
-    /// </summary>
-    /// <typeparam name="TClient">HTTP client type</typeparam>
-    /// <typeparam name="TResponse">Response type to cache</typeparam>
-    /// <param name="services">Service collection</param>
-    /// <param name="configureOptions">Configure cache options</param>
-    /// <returns>Service collection for chaining</returns>
-    public static IServiceCollection AddHttpClientCaching<TClient, TResponse>(
-        this IServiceCollection services,
-        Action<HttpCacheOptions>? configureOptions = null)
-        where TClient : class
-    {
-        // Check if IMemoryCache is registered
-        var hasMemoryCache = services.Any(x => x.ServiceType == typeof(IMemoryCache));
-        if (!hasMemoryCache)
-        {
-            throw new InvalidOperationException(
-                "IMemoryCache is not registered. Please call services.AddMemoryCache() or services.AddHttpCaching() first.");
-        }
-
-        // Register default cache options
-        if (configureOptions is not null)
-        {
-            services.Configure(configureOptions);
-        }
-
-        // Register cache key generator as singleton
-        services.TryAddSingleton<ICacheKeyGenerator, DefaultCacheKeyGenerator>();
-
-        // Register cache provider as scoped (one per request/scope)
-        services.TryAddScoped<IHttpResponseCache<TResponse>, MemoryCacheProvider<TResponse>>();
-
-        // Register cached HTTP client as scoped
-        services.TryAddScoped<CachedHttpClient<TResponse>>();
-
-        return services;
-    }
+        => builder.AddResilienceWithCaching<TResponse>(configureResilience: null, options => CopyPresetToOptions(CachePresets.LongTerm, options));
 }

@@ -1,3 +1,5 @@
+#pragma warning disable MA0048 // File name must match type name
+
 using System.Net;
 
 using FluentAssertions;
@@ -18,7 +20,7 @@ public class HttpClientExtensionsTests
         _services.AddLogging();
 
         var configurationBuilder = new ConfigurationBuilder();
-        configurationBuilder.AddInMemoryCollection(new Dictionary<string, string?>
+        configurationBuilder.AddInMemoryCollection(new Dictionary<string, string?>(StringComparer.Ordinal)
         {
             ["TestApi:BaseUrl"] = "https://api.test.com",
             ["TestApi:TimeoutSeconds"] = "45",
@@ -260,7 +262,7 @@ public class TestHttpClient(System.Net.Http.HttpClient httpClient)
 
     public async Task<HttpResponseMessage> GetAsync(string requestUri)
     {
-        return await _httpClient.GetAsync(requestUri);
+        return await _httpClient.GetAsync(requestUri).ConfigureAwait(false);
     }
 }
 
@@ -283,7 +285,9 @@ public class MockHttpMessageHandler : HttpMessageHandler
         RequestCount++;
         return Task.FromResult(new HttpResponseMessage(_statusCode)
         {
-            Content = new StringContent(_content)
+            Content = new StringContent(_content),
         });
     }
 }
+
+#pragma warning restore MA0048

@@ -352,7 +352,7 @@ public class MonitoredCacheProvider<T> : IHttpResponseCache<T>
     {
         var result = await _innerCache.GetAsync(key);
 
-        if (result != null)
+        if (result is not null)
         {
             _logger.LogInformation("Cache hit for key: {Key}", key);
         }

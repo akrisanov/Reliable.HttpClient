@@ -1,3 +1,5 @@
+#pragma warning disable MA0048 // File name must match type name
+
 using FluentAssertions;
 using Xunit;
 
@@ -112,24 +114,13 @@ public class RetryOptionsValidationTests
         options.Invoking(o => o.Validate()).Should().NotThrow();
     }
 
-    [Fact]
-    public void RetryOptions_Validate_WithZeroBaseDelay_ShouldThrow()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-100)]
+    public void RetryOptions_Validate_WithInvalidBaseDelay_ShouldThrow(int delayMilliseconds)
     {
         // Arrange
-        var options = new RetryOptions { BaseDelay = TimeSpan.Zero };
-
-        // Act & Assert
-        options.Invoking(o => o.Validate())
-            .Should().Throw<ArgumentException>()
-            .WithParameterName(nameof(RetryOptions.BaseDelay))
-            .WithMessage("BaseDelay must be greater than zero*");
-    }
-
-    [Fact]
-    public void RetryOptions_Validate_WithNegativeBaseDelay_ShouldThrow()
-    {
-        // Arrange
-        var options = new RetryOptions { BaseDelay = TimeSpan.FromMilliseconds(-100) };
+        var options = new RetryOptions { BaseDelay = TimeSpan.FromMilliseconds(delayMilliseconds) };
 
         // Act & Assert
         options.Invoking(o => o.Validate())
@@ -254,3 +245,5 @@ public class CircuitBreakerOptionsValidationTests
             .WithMessage("OpenDuration must be greater than zero*");
     }
 }
+
+#pragma warning restore MA0048

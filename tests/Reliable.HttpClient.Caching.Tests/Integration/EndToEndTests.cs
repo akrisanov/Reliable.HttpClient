@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 
@@ -38,11 +37,11 @@ public class EndToEndTests : IDisposable
         _serviceProvider = services.BuildServiceProvider();
 
         // Create cached client with the HttpClient that has the mock handler
-        var httpClientFactory = _serviceProvider.GetRequiredService<IHttpClientFactory>();
-        var httpClient = httpClientFactory.CreateClient(nameof(TestApiClient));
-        var cache = _serviceProvider.GetRequiredService<IHttpResponseCache<TestResponse>>();
-        var options = _serviceProvider.GetRequiredService<IOptionsSnapshot<HttpCacheOptions>>();
-        var logger = _serviceProvider.GetRequiredService<ILogger<CachedHttpClient<TestResponse>>>();
+        IHttpClientFactory httpClientFactory = _serviceProvider.GetRequiredService<IHttpClientFactory>();
+        NetHttpClient httpClient = httpClientFactory.CreateClient(nameof(TestApiClient));
+        IHttpResponseCache<TestResponse> cache = _serviceProvider.GetRequiredService<IHttpResponseCache<TestResponse>>();
+        IOptionsSnapshot<HttpCacheOptions> options = _serviceProvider.GetRequiredService<IOptionsSnapshot<HttpCacheOptions>>();
+        ILogger<CachedHttpClient<TestResponse>> logger = _serviceProvider.GetRequiredService<ILogger<CachedHttpClient<TestResponse>>>();
 
         _cachedClient = new CachedHttpClient<TestResponse>(httpClient, cache, options, logger);
     }
@@ -58,8 +57,8 @@ public class EndToEndTests : IDisposable
         });
 
         // Act
-        var result1 = await _cachedClient.GetFromJsonAsync("https://api.example.com/users/1");
-        var result2 = await _cachedClient.GetFromJsonAsync("https://api.example.com/users/1");
+        TestResponse result1 = await _cachedClient.GetFromJsonAsync("https://api.example.com/users/1");
+        TestResponse result2 = await _cachedClient.GetFromJsonAsync("https://api.example.com/users/1");
 
         // Assert
         result1.Should().NotBeNull();
@@ -84,11 +83,11 @@ public class EndToEndTests : IDisposable
         _mockHandler.SetupSequentialResponses(
             new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent(response1Json, Encoding.UTF8, "application/json")
+                Content = new StringContent(response1Json, Encoding.UTF8, "application/json"),
             },
             new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent(response2Json, Encoding.UTF8, "application/json")
+                Content = new StringContent(response2Json, Encoding.UTF8, "application/json"),
             }
         );
 
@@ -96,14 +95,15 @@ public class EndToEndTests : IDisposable
         var request1 = new HttpRequestMessage(HttpMethod.Get, "https://api.example.com/users/1");
         var request2 = new HttpRequestMessage(HttpMethod.Get, "https://api.example.com/users/2");
 
-        var result1 = await _cachedClient.SendAsync(request1, DeserializeResponse);
-        var result2 = await _cachedClient.SendAsync(request2, DeserializeResponse);
+        TestResponse result1 = await _cachedClient.SendAsync(request1, DeserializeResponse);
+        TestResponse result2 = await _cachedClient.SendAsync(request2, DeserializeResponse);
 
         // Repeat requests - should come from cache
-        var cachedResult1 = await _cachedClient.SendAsync(
+        TestResponse cachedResult1 = await _cachedClient.SendAsync(
             new HttpRequestMessage(HttpMethod.Get, "https://api.example.com/users/1"),
             DeserializeResponse);
-        var cachedResult2 = await _cachedClient.SendAsync(
+
+        TestResponse cachedResult2 = await _cachedClient.SendAsync(
             new HttpRequestMessage(HttpMethod.Get, "https://api.example.com/users/2"),
             DeserializeResponse);
 
@@ -129,7 +129,7 @@ public class EndToEndTests : IDisposable
         var responseJson = JsonSerializer.Serialize(new TestResponse { Id = 1, Name = "John" });
         _mockHandler.SetResponse(new HttpResponseMessage(HttpStatusCode.OK)
         {
-            Content = new StringContent(responseJson, Encoding.UTF8, "application/json")
+            Content = new StringContent(responseJson, Encoding.UTF8, "application/json"),
         });
 
         // Act
@@ -140,9 +140,9 @@ public class EndToEndTests : IDisposable
         authRequest1.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "token1");
         authRequest2.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "token2");
 
-        var publicResult = await _cachedClient.SendAsync(publicRequest, DeserializeResponse);
-        var authResult1 = await _cachedClient.SendAsync(authRequest1, DeserializeResponse);
-        var authResult2 = await _cachedClient.SendAsync(authRequest2, DeserializeResponse);
+        TestResponse publicResult = await _cachedClient.SendAsync(publicRequest, DeserializeResponse);
+        TestResponse authResult1 = await _cachedClient.SendAsync(authRequest1, DeserializeResponse);
+        TestResponse authResult2 = await _cachedClient.SendAsync(authRequest2, DeserializeResponse);
 
         // Assert
         publicResult.Should().NotBeNull();
@@ -160,18 +160,18 @@ public class EndToEndTests : IDisposable
         var responseJson = JsonSerializer.Serialize(new TestResponse { Id = 1, Name = "John" });
         _mockHandler.SetResponse(new HttpResponseMessage(HttpStatusCode.OK)
         {
-            Content = new StringContent(responseJson, Encoding.UTF8, "application/json")
+            Content = new StringContent(responseJson, Encoding.UTF8, "application/json"),
         });
 
         // Act
-        var result1 = await _cachedClient.GetFromJsonAsync("https://api.example.com/users/1");
+        TestResponse result1 = await _cachedClient.GetFromJsonAsync("https://api.example.com/users/1");
         _mockHandler.RequestCount.Should().Be(1);
 
         // Clear cache
         await _cachedClient.ClearCacheAsync();
 
         // Make the same request again
-        var result2 = await _cachedClient.GetFromJsonAsync("https://api.example.com/users/1");
+        TestResponse result2 = await _cachedClient.GetFromJsonAsync("https://api.example.com/users/1");
 
         // Assert
         result1.Should().NotBeNull();
@@ -191,21 +191,21 @@ public class EndToEndTests : IDisposable
         _mockHandler.SetupSequentialResponses(
             new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent(response1Json, Encoding.UTF8, "application/json")
+                Content = new StringContent(response1Json, Encoding.UTF8, "application/json"),
             },
             new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent(response2Json, Encoding.UTF8, "application/json")
+                Content = new StringContent(response2Json, Encoding.UTF8, "application/json"),
             },
             new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent(response1Json, Encoding.UTF8, "application/json")
+                Content = new StringContent(response1Json, Encoding.UTF8, "application/json"),
             }
         );
 
         // Act
-        var result1 = await _cachedClient.GetFromJsonAsync("https://api.example.com/users/1");
-        var result2 = await _cachedClient.GetFromJsonAsync("https://api.example.com/users/2");
+        TestResponse result1 = await _cachedClient.GetFromJsonAsync("https://api.example.com/users/1");
+        TestResponse result2 = await _cachedClient.GetFromJsonAsync("https://api.example.com/users/2");
         _mockHandler.RequestCount.Should().Be(2);
 
         // Remove specific item from cache
@@ -213,8 +213,8 @@ public class EndToEndTests : IDisposable
         await _cachedClient.RemoveFromCacheAsync(removeRequest);
 
         // Make requests again
-        var cachedResult1 = await _cachedClient.GetFromJsonAsync("https://api.example.com/users/1"); // Should hit HTTP
-        var cachedResult2 = await _cachedClient.GetFromJsonAsync("https://api.example.com/users/2"); // Should hit cache
+        TestResponse cachedResult1 = await _cachedClient.GetFromJsonAsync("https://api.example.com/users/1"); // Should hit HTTP
+        TestResponse cachedResult2 = await _cachedClient.GetFromJsonAsync("https://api.example.com/users/2"); // Should hit cache
 
         // Assert
         result1.Should().NotBeNull();
@@ -233,15 +233,15 @@ public class EndToEndTests : IDisposable
         var responseJson = JsonSerializer.Serialize(new TestResponse { Id = 1, Name = "John" });
         _mockHandler.SetResponse(new HttpResponseMessage(HttpStatusCode.OK)
         {
-            Content = new StringContent(responseJson, Encoding.UTF8, "application/json")
+            Content = new StringContent(responseJson, Encoding.UTF8, "application/json"),
         });
 
         // Act
         var request1 = new HttpRequestMessage(HttpMethod.Post, "https://api.example.com/users");
         var request2 = new HttpRequestMessage(HttpMethod.Post, "https://api.example.com/users");
 
-        var result1 = await _cachedClient.SendAsync(request1, DeserializeResponse);
-        var result2 = await _cachedClient.SendAsync(request2, DeserializeResponse);
+        TestResponse result1 = await _cachedClient.SendAsync(request1, DeserializeResponse);
+        TestResponse result2 = await _cachedClient.SendAsync(request2, DeserializeResponse);
 
         // Assert
         result1.Should().NotBeNull();
@@ -254,7 +254,7 @@ public class EndToEndTests : IDisposable
     private static async Task<TestResponse> DeserializeResponse(HttpResponseMessage response)
     {
         response.EnsureSuccessStatusCode();
-        var json = await response.Content.ReadAsStringAsync();
+        var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
         return JsonSerializer.Deserialize<TestResponse>(json)
                ?? throw new InvalidOperationException("Failed to deserialize response");
     }
@@ -262,11 +262,13 @@ public class EndToEndTests : IDisposable
     public void Dispose()
     {
         _serviceProvider?.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     private class TestApiClient
     {
-        public TestApiClient(NetHttpClient httpClient) { }
+        // This class is used only as a type parameter for DI registration
+        // No actual HttpClient usage needed in tests
     }
 
     public class TestResponse
@@ -290,7 +292,7 @@ public class EndToEndTests : IDisposable
         public void SetupSequentialResponses(params HttpResponseMessage[] responses)
         {
             _responses.Clear();
-            foreach (var response in responses)
+            foreach (HttpResponseMessage response in responses)
             {
                 _responses.Enqueue(response);
             }

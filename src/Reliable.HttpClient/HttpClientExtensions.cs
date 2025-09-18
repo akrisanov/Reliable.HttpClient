@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -47,7 +48,7 @@ public static class HttpClientExtensions
     {
         var optionsBuilder = new HttpClientOptionsBuilder();
         configureOptions(optionsBuilder);
-        var options = optionsBuilder.Build();
+        HttpClientOptions options = optionsBuilder.Build();
 
         return builder
             .AddPolicyHandler(CreateRetryPolicy(options))
@@ -149,10 +150,10 @@ public static class HttpClientExtensions
 
         return Policy
             .Handle<HttpRequestException>()
-            .OrResult<HttpResponseMessage>(msg =>
-                (int)msg.StatusCode >= 500 ||
-                msg.StatusCode == HttpStatusCode.RequestTimeout ||
-                msg.StatusCode == HttpStatusCode.TooManyRequests)
+            .OrResult<HttpResponseMessage>(msg => msg.StatusCode is
+                >= HttpStatusCode.InternalServerError or
+                HttpStatusCode.RequestTimeout or
+                HttpStatusCode.TooManyRequests)
             .WaitAndRetryAsync(
                 retryCount: options.Retry.MaxRetries,
                 sleepDurationProvider: retryAttempt =>
@@ -160,7 +161,7 @@ public static class HttpClientExtensions
                     var delay = TimeSpan.FromMilliseconds(
                         options.Retry.BaseDelay.TotalMilliseconds * Math.Pow(2, retryAttempt - 1));
 
-                    TimeSpan finalDelay = delay > options.Retry.MaxDelay ? options.Retry.MaxDelay : delay;
+                    var finalDelay = TimeSpan.FromMilliseconds(Math.Min(delay.TotalMilliseconds, options.Retry.MaxDelay.TotalMilliseconds));
 
                     // Add jitter (random deviation) to avoid thundering herd
                     var jitterRange = finalDelay.TotalMilliseconds * options.Retry.JitterFactor;
@@ -175,10 +176,10 @@ public static class HttpClientExtensions
     {
         return Policy
             .Handle<HttpRequestException>()
-            .OrResult<HttpResponseMessage>(msg =>
-                (int)msg.StatusCode >= 500 ||
-                msg.StatusCode == HttpStatusCode.RequestTimeout ||
-                msg.StatusCode == HttpStatusCode.TooManyRequests)
+            .OrResult<HttpResponseMessage>(msg => msg.StatusCode is
+                >= HttpStatusCode.InternalServerError or
+                HttpStatusCode.RequestTimeout or
+                HttpStatusCode.TooManyRequests)
             .CircuitBreakerAsync(
                 handledEventsAllowedBeforeBreaking: options.CircuitBreaker.FailuresBeforeOpen,
                 durationOfBreak: options.CircuitBreaker.OpenDuration);
@@ -222,10 +223,10 @@ public static class HttpClientExtensions
 
         return Policy
             .Handle<HttpRequestException>()
-            .OrResult<HttpResponseMessage>(msg =>
-                (int)msg.StatusCode >= 500 ||
-                msg.StatusCode == HttpStatusCode.RequestTimeout ||
-                msg.StatusCode == HttpStatusCode.TooManyRequests)
+            .OrResult<HttpResponseMessage>(msg => msg.StatusCode is
+                >= HttpStatusCode.InternalServerError or
+                HttpStatusCode.RequestTimeout or
+                HttpStatusCode.TooManyRequests)
             .WaitAndRetryAsync(
                 retryCount: options.Retry.MaxRetries,
                 sleepDurationProvider: retryAttempt =>
@@ -233,7 +234,7 @@ public static class HttpClientExtensions
                     var delay = TimeSpan.FromMilliseconds(
                         options.Retry.BaseDelay.TotalMilliseconds * Math.Pow(2, retryAttempt - 1));
 
-                    TimeSpan finalDelay = delay > options.Retry.MaxDelay ? options.Retry.MaxDelay : delay;
+                    var finalDelay = TimeSpan.FromMilliseconds(Math.Min(delay.TotalMilliseconds, options.Retry.MaxDelay.TotalMilliseconds));
 
                     // Add jitter (random deviation) to avoid thundering herd
                     var jitterRange = finalDelay.TotalMilliseconds * options.Retry.JitterFactor;
@@ -295,10 +296,10 @@ public static class HttpClientExtensions
 
         return Policy
             .Handle<HttpRequestException>()
-            .OrResult<HttpResponseMessage>(msg =>
-                (int)msg.StatusCode >= 500 ||
-                msg.StatusCode == HttpStatusCode.RequestTimeout ||
-                msg.StatusCode == HttpStatusCode.TooManyRequests)
+            .OrResult<HttpResponseMessage>(msg => msg.StatusCode is
+                >= HttpStatusCode.InternalServerError or
+                HttpStatusCode.RequestTimeout or
+                HttpStatusCode.TooManyRequests)
             .CircuitBreakerAsync(
                 handledEventsAllowedBeforeBreaking: options.CircuitBreaker.FailuresBeforeOpen,
                 durationOfBreak: options.CircuitBreaker.OpenDuration,
@@ -318,5 +319,171 @@ public static class HttpClientExtensions
                 {
                     logger.LogInformation("{ClientName} HTTP circuit breaker in half-open state", clientName);
                 });
+    }
+
+    // Universal response handler methods (RFC #1)
+
+    /// <summary>
+    /// Performs GET request with universal response handler
+    /// </summary>
+    /// <typeparam name="TResponse">Response type after deserialization</typeparam>
+    /// <param name="httpClient">HttpClient instance</param>
+    /// <param name="requestUri">Request URI</param>
+    /// <param name="responseHandler">Universal response handler</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Typed response</returns>
+    public static async Task<TResponse> GetAsync<TResponse>(
+        this System.Net.Http.HttpClient httpClient,
+        string requestUri,
+        IHttpResponseHandler responseHandler,
+        CancellationToken cancellationToken = default)
+    {
+        HttpResponseMessage response = await httpClient.GetAsync(requestUri, cancellationToken).ConfigureAwait(false);
+        return await responseHandler.HandleAsync<TResponse>(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Performs GET request with universal response handler
+    /// </summary>
+    /// <typeparam name="TResponse">Response type after deserialization</typeparam>
+    /// <param name="httpClient">HttpClient instance</param>
+    /// <param name="requestUri">Request URI</param>
+    /// <param name="responseHandler">Universal response handler</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Typed response</returns>
+    public static async Task<TResponse> GetAsync<TResponse>(
+        this System.Net.Http.HttpClient httpClient,
+        Uri requestUri,
+        IHttpResponseHandler responseHandler,
+        CancellationToken cancellationToken = default)
+    {
+        HttpResponseMessage response = await httpClient.GetAsync(requestUri, cancellationToken).ConfigureAwait(false);
+        return await responseHandler.HandleAsync<TResponse>(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Performs POST request with universal response handler
+    /// </summary>
+    /// <typeparam name="TRequest">Request content type</typeparam>
+    /// <typeparam name="TResponse">Response type after deserialization</typeparam>
+    /// <param name="httpClient">HttpClient instance</param>
+    /// <param name="requestUri">Request URI</param>
+    /// <param name="content">Request content</param>
+    /// <param name="responseHandler">Universal response handler</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Typed response</returns>
+    public static async Task<TResponse> PostAsync<TRequest, TResponse>(
+        this System.Net.Http.HttpClient httpClient,
+        string requestUri,
+        TRequest content,
+        IHttpResponseHandler responseHandler,
+        CancellationToken cancellationToken = default)
+    {
+        HttpResponseMessage response = await httpClient.PostAsJsonAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
+        return await responseHandler.HandleAsync<TResponse>(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Performs POST request with universal response handler
+    /// </summary>
+    /// <typeparam name="TRequest">Request content type</typeparam>
+    /// <typeparam name="TResponse">Response type after deserialization</typeparam>
+    /// <param name="httpClient">HttpClient instance</param>
+    /// <param name="requestUri">Request URI</param>
+    /// <param name="content">Request content</param>
+    /// <param name="responseHandler">Universal response handler</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Typed response</returns>
+    public static async Task<TResponse> PostAsync<TRequest, TResponse>(
+        this System.Net.Http.HttpClient httpClient,
+        Uri requestUri,
+        TRequest content,
+        IHttpResponseHandler responseHandler,
+        CancellationToken cancellationToken = default)
+    {
+        HttpResponseMessage response = await httpClient.PostAsJsonAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
+        return await responseHandler.HandleAsync<TResponse>(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Performs PUT request with universal response handler
+    /// </summary>
+    /// <typeparam name="TRequest">Request content type</typeparam>
+    /// <typeparam name="TResponse">Response type after deserialization</typeparam>
+    /// <param name="httpClient">HttpClient instance</param>
+    /// <param name="requestUri">Request URI</param>
+    /// <param name="content">Request content</param>
+    /// <param name="responseHandler">Universal response handler</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Typed response</returns>
+    public static async Task<TResponse> PutAsync<TRequest, TResponse>(
+        this System.Net.Http.HttpClient httpClient,
+        string requestUri,
+        TRequest content,
+        IHttpResponseHandler responseHandler,
+        CancellationToken cancellationToken = default)
+    {
+        HttpResponseMessage response = await httpClient.PutAsJsonAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
+        return await responseHandler.HandleAsync<TResponse>(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Performs PUT request with universal response handler
+    /// </summary>
+    /// <typeparam name="TRequest">Request content type</typeparam>
+    /// <typeparam name="TResponse">Response type after deserialization</typeparam>
+    /// <param name="httpClient">HttpClient instance</param>
+    /// <param name="requestUri">Request URI</param>
+    /// <param name="content">Request content</param>
+    /// <param name="responseHandler">Universal response handler</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Typed response</returns>
+    public static async Task<TResponse> PutAsync<TRequest, TResponse>(
+        this System.Net.Http.HttpClient httpClient,
+        Uri requestUri,
+        TRequest content,
+        IHttpResponseHandler responseHandler,
+        CancellationToken cancellationToken = default)
+    {
+        HttpResponseMessage response = await httpClient.PutAsJsonAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
+        return await responseHandler.HandleAsync<TResponse>(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Performs DELETE request with universal response handler
+    /// </summary>
+    /// <typeparam name="TResponse">Response type after deserialization</typeparam>
+    /// <param name="httpClient">HttpClient instance</param>
+    /// <param name="requestUri">Request URI</param>
+    /// <param name="responseHandler">Universal response handler</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Typed response</returns>
+    public static async Task<TResponse> DeleteAsync<TResponse>(
+        this System.Net.Http.HttpClient httpClient,
+        string requestUri,
+        IHttpResponseHandler responseHandler,
+        CancellationToken cancellationToken = default)
+    {
+        HttpResponseMessage response = await httpClient.DeleteAsync(requestUri, cancellationToken).ConfigureAwait(false);
+        return await responseHandler.HandleAsync<TResponse>(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Performs DELETE request with universal response handler
+    /// </summary>
+    /// <typeparam name="TResponse">Response type after deserialization</typeparam>
+    /// <param name="httpClient">HttpClient instance</param>
+    /// <param name="requestUri">Request URI</param>
+    /// <param name="responseHandler">Universal response handler</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Typed response</returns>
+    public static async Task<TResponse> DeleteAsync<TResponse>(
+        this System.Net.Http.HttpClient httpClient,
+        Uri requestUri,
+        IHttpResponseHandler responseHandler,
+        CancellationToken cancellationToken = default)
+    {
+        HttpResponseMessage response = await httpClient.DeleteAsync(requestUri, cancellationToken).ConfigureAwait(false);
+        return await responseHandler.HandleAsync<TResponse>(response, cancellationToken).ConfigureAwait(false);
     }
 }
