@@ -5,36 +5,41 @@
     <AssemblyName>Reliable.HttpClient</AssemblyName>
     <PackageId>Reliable.HttpClient</PackageId>
     <Version>1.1.0</Version>
-    <PackageReleaseNotes>🎉 v1.1.0 Release - Universal Interface!
+    <PackageReleaseNotes>🎉 v1.1.0 Release - RFC #1: Universal Response Handlers &amp; HttpClient
+      Substitution
 
-      ✨ New Features:
-      • Universal IHttpResponseHandler interface (non-generic) for better extensibility
-      • Improved caching compatibility and DI integration
-      • Enhanced type safety and cleaner API design
+      ✨ Major New Features:
+      • Universal IHttpResponseHandler interface (non-generic) for multi-entity REST APIs
+      • HttpClient Substitution Pattern via IHttpClientAdapter interface
+      • DefaultHttpResponseHandler with automatic JSON deserialization
+      • Extension methods for universal response handling
+      • ServiceCollection extensions for seamless DI integration
+      • Support for both regular and cached HttpClient implementations
 
-      🔄 Previous Features (from v1.0.0):
-      • Fluent configuration API with HttpClientOptionsBuilder
-      • 6 predefined presets for common scenarios (FastInternalApi, SlowExternalApi, etc.)
-      • Retry policies with exponential backoff and jitter
-      • Circuit breaker pattern implementation
-      • Zero-configuration setup with sensible defaults
-      • HTTP response handling with typed responses
-      • Full .NET 6.0, 8.0, 9.0 support
+      🔧 API Improvements:
+      • C# 12 modernization with primary constructors and file-scoped namespaces
+      • Enhanced type safety with class constraints
+      • Improved ConfigureAwait(false) usage throughout
+      • Zero breaking changes - fully backward compatible
 
-      🔧 What's New in v1.0:
-      • Stable public API with semantic versioning commitment
-      • Production-ready defaults based on industry best practices
-      • Comprehensive documentation and examples
-      • Complete test coverage
+      🎯 Use Cases:
+      • REST APIs with 5+ entity types → Universal Response Handlers
+      • HttpClient substitution scenarios → IHttpClientAdapter
+      • Legacy code migration → Drop-in replacement patterns
+      • Custom serialization needs → Extensible handler architecture
 
-      🚀 Quick Start: services.AddHttpClient("api").AddResilience();
+      🚀 Quick Start:
+      services.AddHttpClientAdapter(); // Universal interface
+      services.AddHttpClientWithAdapter(); // With configuration
 
       See full documentation at: https://github.com/akrisanov/Reliable.HttpClient</PackageReleaseNotes>
     <Authors>Andrey Krisanov</Authors>
     <Company></Company>
-    <Description>Lightweight resilience helpers (retry with jitter, circuit breaker) and response
-      handling for HttpClient with minimal dependencies.</Description>
-    <PackageTags>httpclient;resilience;polly;retry;circuit-breaker;dotnet</PackageTags>
+    <Description>Production-ready HttpClient resilience ecosystem with universal response handlers,
+      HttpClient substitution patterns, retry policies, and circuit breakers. Zero configuration
+      required.</Description>
+    <PackageTags>
+      httpclient;resilience;polly;retry;circuit-breaker;universal-handlers;substitution;rest-api;dotnet</PackageTags>
     <RepositoryUrl>https://github.com/akrisanov/Reliable.HttpClient</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
