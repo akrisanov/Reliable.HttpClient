@@ -17,8 +17,8 @@ public class MemoryCacheProvider<TResponse>(
     IMemoryCache memoryCache,
     ILogger<MemoryCacheProvider<TResponse>> logger) : IHttpResponseCache<TResponse>
 {
-    private readonly IMemoryCache _memoryCache = memoryCache ?? throw new ArgumentNullException(nameof(memoryCache));
-    private readonly ILogger<MemoryCacheProvider<TResponse>> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    private readonly IMemoryCache _memoryCache = memoryCache;
+    private readonly ILogger<MemoryCacheProvider<TResponse>> _logger = logger;
     private readonly string _keyPrefix = $"http_cache_{typeof(TResponse).Name}_";
     private readonly ConcurrentBag<string> _cacheKeys = [];
 

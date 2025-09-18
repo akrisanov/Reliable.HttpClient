@@ -64,7 +64,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.8" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.8" />
     <!-- For release: uncomment PackageReference and comment out ProjectReference -->
-    <PackageReference Include="Reliable.HttpClient" Version="1.1.0" />
+    <PackageReference Include="Reliable.HttpClient" Version="1.2.0" />
   </ItemGroup>
 
   <ItemGroup>

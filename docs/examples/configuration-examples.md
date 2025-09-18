@@ -47,6 +47,34 @@ services.AddHttpClient<CustomApiClient>()
             .WithOpenDuration(TimeSpan.FromMinutes(5))));
 ```
 
+### 4. Caching with Custom Headers
+
+```csharp
+// Configure default headers and caching
+services.AddHttpClient<ApiClient>()
+    .AddResilience()
+    .AddMemoryCache(options => options
+        .WithDefaultExpiry(TimeSpan.FromMinutes(10))
+        .AddHeader("User-Agent", "MyApp/1.0")
+        .AddHeader("Accept", "application/json")
+        .AddHeader("API-Version", "v2"));
+
+// Per-request header customization
+public class ApiService(IHttpClientWithCache client)
+{
+    public async Task<UserData> GetUserDataAsync(int userId, string userToken)
+    {
+        var headers = new Dictionary<string, string>
+        {
+            ["Authorization"] = $"Bearer {userToken}",
+            ["X-Request-ID"] = Guid.NewGuid().ToString()
+        };
+
+        return await client.GetAsync<UserData>($"/users/{userId}", headers);
+    }
+}
+```
+
 ## Real-World Scenario Examples
 
 ### E-commerce Platform

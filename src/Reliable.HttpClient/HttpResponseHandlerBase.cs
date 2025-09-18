@@ -100,7 +100,7 @@ public abstract class HttpResponseHandlerBase<TResponse>(ILogger logger) : IHttp
             HttpStatusCode.BadGateway => "Bad gateway",
             HttpStatusCode.ServiceUnavailable => "Service unavailable",
             HttpStatusCode.GatewayTimeout => "Gateway timeout",
-            _ => $"HTTP {(int)statusCode}: {statusCode}"
+            _ => $"HTTP {(int)statusCode}: {statusCode}",
         };
     }
 }

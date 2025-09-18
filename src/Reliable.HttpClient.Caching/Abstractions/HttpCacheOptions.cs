@@ -11,6 +11,12 @@ public class HttpCacheOptions
     public TimeSpan DefaultExpiry { get; set; } = TimeSpan.FromMinutes(5);
 
     /// <summary>
+    /// Default headers to add to all requests
+    /// </summary>
+    public IDictionary<string, string> DefaultHeaders { get; set; } =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Maximum number of items to cache (for memory cache). Helps prevent memory leaks.
     /// </summary>
     public int? MaxCacheSize { get; set; } = 1_000;

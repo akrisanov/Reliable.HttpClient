@@ -16,12 +16,12 @@ public static class HttpClientWithCacheExtensions
     /// </summary>
     /// <param name="services">Service collection</param>
     /// <param name="httpClientName">HTTP client name (optional)</param>
-    /// <param name="defaultCacheDuration">Default cache duration (optional, defaults to 5 minutes)</param>
+    /// <param name="cacheOptions">Cache options including default headers and settings (optional)</param>
     /// <returns>Service collection for method chaining</returns>
     public static IServiceCollection AddHttpClientWithCache(
         this IServiceCollection services,
         string? httpClientName = null,
-        TimeSpan? defaultCacheDuration = null)
+        HttpCacheOptions? cacheOptions = null)
     {
         // Register dependencies
         services.AddMemoryCache();
@@ -44,9 +44,9 @@ public static class HttpClientWithCacheExtensions
                 httpClient,
                 cache,
                 responseHandler,
+                cacheOptions,
                 cacheKeyGenerator,
-                logger,
-                defaultCacheDuration);
+                logger);
         });
 
         return services;
@@ -58,20 +58,20 @@ public static class HttpClientWithCacheExtensions
     /// <param name="services">Service collection</param>
     /// <param name="httpClientName">HTTP client name</param>
     /// <param name="configureResilience">Action to configure resilience options</param>
-    /// <param name="defaultCacheDuration">Default cache duration (optional, defaults to 5 minutes)</param>
+    /// <param name="cacheOptions">Cache options including default headers and settings (optional)</param>
     /// <returns>Service collection for method chaining</returns>
     public static IServiceCollection AddResilientHttpClientWithCache(
         this IServiceCollection services,
         string httpClientName,
         Action<HttpClientOptions>? configureResilience = null,
-        TimeSpan? defaultCacheDuration = null)
+        HttpCacheOptions? cacheOptions = null)
     {
         // Add HTTP client with resilience
         services.AddHttpClient(httpClientName)
                 .AddResilience(configureResilience);
 
         // Add universal HTTP client with cache
-        return services.AddHttpClientWithCache(httpClientName, defaultCacheDuration);
+        return services.AddHttpClientWithCache(httpClientName, cacheOptions);
     }
 
     /// <summary>
@@ -81,20 +81,20 @@ public static class HttpClientWithCacheExtensions
     /// <param name="httpClientName">HTTP client name</param>
     /// <param name="preset">Predefined resilience preset</param>
     /// <param name="customizeOptions">Optional action to customize preset options</param>
-    /// <param name="defaultCacheDuration">Default cache duration (optional, defaults to 5 minutes)</param>
+    /// <param name="cacheOptions">Cache options including default headers and settings (optional)</param>
     /// <returns>Service collection for method chaining</returns>
     public static IServiceCollection AddResilientHttpClientWithCache(
         this IServiceCollection services,
         string httpClientName,
         HttpClientOptions preset,
         Action<HttpClientOptions>? customizeOptions = null,
-        TimeSpan? defaultCacheDuration = null)
+        HttpCacheOptions? cacheOptions = null)
     {
         // Add HTTP client with resilience preset
         services.AddHttpClient(httpClientName)
                 .AddResilience(preset, customizeOptions);
 
         // Add universal HTTP client with cache
-        return services.AddHttpClientWithCache(httpClientName, defaultCacheDuration);
+        return services.AddHttpClientWithCache(httpClientName, cacheOptions);
     }
 }

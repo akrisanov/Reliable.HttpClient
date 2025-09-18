@@ -93,6 +93,34 @@ public class CachedHttpClient<TResponse>(
     }
 
     /// <summary>
+    /// GET request with JSON deserialization, custom headers, and caching
+    /// </summary>
+    public async Task<TResponse> GetFromJsonAsync(
+        string requestUri,
+        IDictionary<string, string> headers,
+        JsonSerializerOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
+
+        // Add custom headers
+        foreach (KeyValuePair<string, string> header in headers)
+        {
+            request.Headers.TryAddWithoutValidation(header.Key, header.Value);
+        }
+
+        return await SendAsync(request, async response =>
+        {
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+            return JsonSerializer.Deserialize<TResponse>(json, options)
+                ?? throw new InvalidOperationException("Failed to deserialize response");
+        }, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// Clears all cached responses
     /// </summary>
     public Task ClearCacheAsync(CancellationToken cancellationToken = default)

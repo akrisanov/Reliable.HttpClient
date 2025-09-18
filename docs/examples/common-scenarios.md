@@ -873,7 +873,7 @@ public class VersionedApiClient
             { "X-Client", "VersionedClient/1.0" }
         };
 
-        if (additionalHeaders != null)
+        if (additionalHeaders is not null)
         {
             foreach (var header in additionalHeaders)
             {

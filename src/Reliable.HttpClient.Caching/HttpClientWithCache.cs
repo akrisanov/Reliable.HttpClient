@@ -15,23 +15,23 @@ namespace Reliable.HttpClient.Caching;
 /// <param name="httpClient">HTTP client instance</param>
 /// <param name="cache">Memory cache instance</param>
 /// <param name="responseHandler">Universal response handler</param>
+/// <param name="cacheOptions">Cache options including default headers and other settings</param>
 /// <param name="cacheKeyGenerator">Cache key generator (optional)</param>
 /// <param name="logger">Logger instance (optional)</param>
-/// <param name="defaultCacheDuration">Default cache duration (optional, defaults to 5 minutes)</param>
 public class HttpClientWithCache(
     System.Net.Http.HttpClient httpClient,
     IMemoryCache cache,
     IHttpResponseHandler responseHandler,
+    HttpCacheOptions? cacheOptions = null,
     ISimpleCacheKeyGenerator? cacheKeyGenerator = null,
-    ILogger<HttpClientWithCache>? logger = null,
-    TimeSpan? defaultCacheDuration = null) : IHttpClientWithCache, IHttpClientAdapter
+    ILogger<HttpClientWithCache>? logger = null) : IHttpClientWithCache, IHttpClientAdapter
 {
     private readonly System.Net.Http.HttpClient _httpClient = httpClient;
     private readonly IMemoryCache _cache = cache;
     private readonly IHttpResponseHandler _responseHandler = responseHandler;
+    private readonly HttpCacheOptions _cacheOptions = cacheOptions ?? new HttpCacheOptions();
     private readonly ISimpleCacheKeyGenerator _cacheKeyGenerator = cacheKeyGenerator ?? new DefaultSimpleCacheKeyGenerator();
     private readonly ILogger<HttpClientWithCache>? _logger = logger;
-    private readonly TimeSpan _defaultCacheDuration = defaultCacheDuration ?? TimeSpan.FromMinutes(5);
 
     /// <inheritdoc />
     public async Task<TResponse> GetAsync<TResponse>(
@@ -39,7 +39,7 @@ public class HttpClientWithCache(
         TimeSpan? cacheDuration = null,
         CancellationToken cancellationToken = default) where TResponse : class
     {
-        var cacheKey = _cacheKeyGenerator.GenerateKey(typeof(TResponse).Name, requestUri);
+        var cacheKey = GenerateCacheKey<TResponse>(requestUri, _cacheOptions.DefaultHeaders);
 
         if (_cache.TryGetValue(cacheKey, out TResponse? cachedResult) && cachedResult is not null)
         {
@@ -49,10 +49,11 @@ public class HttpClientWithCache(
 
         _logger?.LogDebug("Cache miss for key: {CacheKey}", cacheKey);
 
-        HttpResponseMessage response = await _httpClient.GetAsync(requestUri, cancellationToken).ConfigureAwait(false);
+        using HttpRequestMessage request = CreateRequestWithHeaders(HttpMethod.Get, requestUri, _cacheOptions.DefaultHeaders);
+        HttpResponseMessage response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
         TResponse result = await _responseHandler.HandleAsync<TResponse>(response, cancellationToken).ConfigureAwait(false);
 
-        TimeSpan duration = cacheDuration ?? _defaultCacheDuration;
+        TimeSpan duration = cacheDuration ?? _cacheOptions.DefaultExpiry;
         _cache.Set(cacheKey, result, duration);
 
         _logger?.LogDebug("Cached result for key: {CacheKey}, Duration: {Duration}", cacheKey, duration);
@@ -67,6 +68,46 @@ public class HttpClientWithCache(
         CancellationToken cancellationToken = default) where TResponse : class
     {
         return await GetAsync<TResponse>(requestUri.ToString(), cacheDuration, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<TResponse> GetAsync<TResponse>(
+        string requestUri,
+        IDictionary<string, string> headers,
+        TimeSpan? cacheDuration = null,
+        CancellationToken cancellationToken = default) where TResponse : class
+    {
+        var cacheKey = GenerateCacheKey<TResponse>(requestUri, headers);
+
+        if (_cache.TryGetValue(cacheKey, out TResponse? cachedResult) && cachedResult is not null)
+        {
+            _logger?.LogDebug("Cache hit for key: {CacheKey}", cacheKey);
+            return cachedResult;
+        }
+
+        _logger?.LogDebug("Cache miss for key: {CacheKey}", cacheKey);
+
+        Dictionary<string, string> allHeaders = MergeHeaders(_cacheOptions.DefaultHeaders, headers);
+        using HttpRequestMessage request = CreateRequestWithHeaders(HttpMethod.Get, requestUri, allHeaders);
+        HttpResponseMessage response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        TResponse result = await _responseHandler.HandleAsync<TResponse>(response, cancellationToken).ConfigureAwait(false);
+
+        TimeSpan duration = cacheDuration ?? _cacheOptions.DefaultExpiry;
+        _cache.Set(cacheKey, result, duration);
+
+        _logger?.LogDebug("Cached result for key: {CacheKey}, Duration: {Duration}", cacheKey, duration);
+
+        return result;
+    }
+
+    /// <inheritdoc />
+    public async Task<TResponse> GetAsync<TResponse>(
+        Uri requestUri,
+        IDictionary<string, string> headers,
+        TimeSpan? cacheDuration = null,
+        CancellationToken cancellationToken = default) where TResponse : class
+    {
+        return await GetAsync<TResponse>(requestUri.ToString(), headers, cacheDuration, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -94,6 +135,36 @@ public class HttpClientWithCache(
     }
 
     /// <inheritdoc />
+    public async Task<TResponse> PostAsync<TRequest, TResponse>(
+        string requestUri,
+        TRequest content,
+        IDictionary<string, string> headers,
+        CancellationToken cancellationToken = default) where TResponse : class
+    {
+        Dictionary<string, string> allHeaders = MergeHeaders(_cacheOptions.DefaultHeaders, headers);
+        using HttpRequestMessage request = CreateRequestWithHeaders(HttpMethod.Post, requestUri, allHeaders);
+        request.Content = JsonContent.Create(content);
+
+        HttpResponseMessage response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        TResponse result = await _responseHandler.HandleAsync<TResponse>(response, cancellationToken).ConfigureAwait(false);
+
+        // Invalidate cache only after successful response handling
+        await InvalidateRelatedCacheAsync(requestUri).ConfigureAwait(false);
+
+        return result;
+    }
+
+    /// <inheritdoc />
+    public async Task<TResponse> PostAsync<TRequest, TResponse>(
+        Uri requestUri,
+        TRequest content,
+        IDictionary<string, string> headers,
+        CancellationToken cancellationToken = default) where TResponse : class
+    {
+        return await PostAsync<TRequest, TResponse>(requestUri.ToString(), content, headers, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public async Task<TResponse> PutAsync<TRequest, TResponse>(
         string requestUri,
         TRequest content,
@@ -109,11 +180,49 @@ public class HttpClientWithCache(
     }
 
     /// <inheritdoc />
+    public async Task<TResponse> PutAsync<TRequest, TResponse>(
+        string requestUri,
+        TRequest content,
+        IDictionary<string, string> headers,
+        CancellationToken cancellationToken = default) where TResponse : class
+    {
+        Dictionary<string, string> allHeaders = MergeHeaders(_cacheOptions.DefaultHeaders, headers);
+        using HttpRequestMessage request = CreateRequestWithHeaders(HttpMethod.Put, requestUri, allHeaders);
+        request.Content = JsonContent.Create(content);
+
+        HttpResponseMessage response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        TResponse result = await _responseHandler.HandleAsync<TResponse>(response, cancellationToken).ConfigureAwait(false);
+
+        // Invalidate cache only after successful response handling
+        await InvalidateRelatedCacheAsync(requestUri).ConfigureAwait(false);
+
+        return result;
+    }
+
+    /// <inheritdoc />
     public async Task<TResponse> DeleteAsync<TResponse>(
         string requestUri,
         CancellationToken cancellationToken = default) where TResponse : class
     {
         HttpResponseMessage response = await _httpClient.DeleteAsync(requestUri, cancellationToken).ConfigureAwait(false);
+        TResponse result = await _responseHandler.HandleAsync<TResponse>(response, cancellationToken).ConfigureAwait(false);
+
+        // Invalidate cache only after successful response handling
+        await InvalidateRelatedCacheAsync(requestUri).ConfigureAwait(false);
+
+        return result;
+    }
+
+    /// <inheritdoc />
+    public async Task<TResponse> DeleteAsync<TResponse>(
+        string requestUri,
+        IDictionary<string, string> headers,
+        CancellationToken cancellationToken = default) where TResponse : class
+    {
+        Dictionary<string, string> allHeaders = MergeHeaders(_cacheOptions.DefaultHeaders, headers);
+        using HttpRequestMessage request = CreateRequestWithHeaders(HttpMethod.Delete, requestUri, allHeaders);
+
+        HttpResponseMessage response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
         TResponse result = await _responseHandler.HandleAsync<TResponse>(response, cancellationToken).ConfigureAwait(false);
 
         // Invalidate cache only after successful response handling
@@ -158,12 +267,77 @@ public class HttpClientWithCache(
         }
     }
 
+    private static HttpRequestMessage CreateRequestWithHeaders(
+        HttpMethod method, string requestUri, IDictionary<string, string>? headers = null)
+    {
+        var request = new HttpRequestMessage(method, requestUri);
+
+        if (headers is not null)
+        {
+            foreach (KeyValuePair<string, string> header in headers)
+            {
+                request.Headers.TryAddWithoutValidation(header.Key, header.Value);
+            }
+        }
+
+        return request;
+    }
+
+    private string GenerateCacheKey<TResponse>(string requestUri, IDictionary<string, string>? headers = null)
+    {
+        var allHeaders = new Dictionary<string, string>(_cacheOptions.DefaultHeaders, StringComparer.OrdinalIgnoreCase);
+
+        if (headers is not null)
+        {
+            foreach (KeyValuePair<string, string> header in headers)
+            {
+                allHeaders[header.Key] = header.Value; // Override default headers if same key
+            }
+        }
+
+        if (allHeaders.Count == 0)
+        {
+            return _cacheKeyGenerator.GenerateKey(typeof(TResponse).Name, requestUri);
+        }
+
+        var headerString = string.Join(';',
+            allHeaders.OrderBy(h => h.Key, StringComparer.OrdinalIgnoreCase)
+                      .Select(h => $"{h.Key}={h.Value}"));
+
+        return _cacheKeyGenerator.GenerateKey(typeof(TResponse).Name, $"{requestUri}#{headerString}");
+    }
+
+    private static Dictionary<string, string> MergeHeaders(
+        IDictionary<string, string> defaultHeaders, IDictionary<string, string>? customHeaders = null)
+    {
+        var result = new Dictionary<string, string>(defaultHeaders, StringComparer.OrdinalIgnoreCase);
+
+        if (customHeaders is not null)
+        {
+            foreach (KeyValuePair<string, string> header in customHeaders)
+            {
+                result[header.Key] = header.Value; // Override default headers if same key
+            }
+        }
+
+        return result;
+    }
+
     // IHttpClientAdapter implementation (without caching for non-GET operations)
     Task<TResponse> IHttpClientAdapter.GetAsync<TResponse>(string requestUri, CancellationToken cancellationToken) =>
         GetAsync<TResponse>(requestUri, cacheDuration: null, cancellationToken);
 
-    Task<TResponse> IHttpClientAdapter.GetAsync<TResponse>(Uri requestUri, CancellationToken cancellationToken) =>
+    Task<TResponse> IHttpClientAdapter.GetAsync<TResponse>(
+        string requestUri, IDictionary<string, string> headers, CancellationToken cancellationToken) =>
+        GetAsync<TResponse>(requestUri, headers, cacheDuration: null, cancellationToken);
+
+    Task<TResponse> IHttpClientAdapter.GetAsync<TResponse>(
+        Uri requestUri, CancellationToken cancellationToken) =>
         GetAsync<TResponse>(requestUri, cacheDuration: null, cancellationToken);
+
+    Task<TResponse> IHttpClientAdapter.GetAsync<TResponse>(
+        Uri requestUri, IDictionary<string, string> headers, CancellationToken cancellationToken) =>
+        GetAsync<TResponse>(requestUri, headers, cacheDuration: null, cancellationToken);
 
     async Task<HttpResponseMessage> IHttpClientAdapter.PostAsync<TRequest>(
         string requestUri, TRequest content, CancellationToken cancellationToken)
@@ -176,6 +350,37 @@ public class HttpClientWithCache(
         return response;
     }
 
+    async Task<HttpResponseMessage> IHttpClientAdapter.PostAsync<TRequest>(
+        string requestUri, TRequest content, IDictionary<string, string> headers, CancellationToken cancellationToken)
+    {
+        Dictionary<string, string> allHeaders = MergeHeaders(_cacheOptions.DefaultHeaders, headers);
+        using HttpRequestMessage request = CreateRequestWithHeaders(HttpMethod.Post, requestUri, allHeaders);
+        request.Content = JsonContent.Create(content);
+
+        HttpResponseMessage response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+
+        // Invalidate cache only after successful HTTP request (before response handler to maintain adapter contract)
+        await InvalidateRelatedCacheAsync(requestUri).ConfigureAwait(false);
+
+        return response;
+    }
+
+    Task<TResponse> IHttpClientAdapter.PostAsync<TRequest, TResponse>(
+        string requestUri, TRequest content, CancellationToken cancellationToken) =>
+        PostAsync<TRequest, TResponse>(requestUri, content, cancellationToken);
+
+    Task<TResponse> IHttpClientAdapter.PostAsync<TRequest, TResponse>(
+        string requestUri, TRequest content, IDictionary<string, string> headers, CancellationToken cancellationToken) =>
+        PostAsync<TRequest, TResponse>(requestUri, content, headers, cancellationToken);
+
+    Task<TResponse> IHttpClientAdapter.PutAsync<TRequest, TResponse>(
+        string requestUri, TRequest content, CancellationToken cancellationToken) =>
+        PutAsync<TRequest, TResponse>(requestUri, content, cancellationToken);
+
+    Task<TResponse> IHttpClientAdapter.PutAsync<TRequest, TResponse>(
+        string requestUri, TRequest content, IDictionary<string, string> headers, CancellationToken cancellationToken) =>
+        PutAsync<TRequest, TResponse>(requestUri, content, headers, cancellationToken);
+
     async Task<HttpResponseMessage> IHttpClientAdapter.DeleteAsync(string requestUri, CancellationToken cancellationToken)
     {
         HttpResponseMessage response = await _httpClient.DeleteAsync(requestUri, cancellationToken).ConfigureAwait(false);
@@ -185,4 +390,26 @@ public class HttpClientWithCache(
 
         return response;
     }
+
+    async Task<HttpResponseMessage> IHttpClientAdapter.DeleteAsync(
+        string requestUri, IDictionary<string, string> headers, CancellationToken cancellationToken)
+    {
+        Dictionary<string, string> allHeaders = MergeHeaders(_cacheOptions.DefaultHeaders, headers);
+        using HttpRequestMessage request = CreateRequestWithHeaders(HttpMethod.Delete, requestUri, allHeaders);
+
+        HttpResponseMessage response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+
+        // Invalidate cache only after successful HTTP request (before response handler to maintain adapter contract)
+        await InvalidateRelatedCacheAsync(requestUri).ConfigureAwait(false);
+
+        return response;
+    }
+
+    Task<TResponse> IHttpClientAdapter.DeleteAsync<TResponse>(
+        string requestUri, CancellationToken cancellationToken) =>
+        DeleteAsync<TResponse>(requestUri, cancellationToken);
+
+    Task<TResponse> IHttpClientAdapter.DeleteAsync<TResponse>(
+        string requestUri, IDictionary<string, string> headers, CancellationToken cancellationToken) =>
+        DeleteAsync<TResponse>(requestUri, headers, cancellationToken);
 }

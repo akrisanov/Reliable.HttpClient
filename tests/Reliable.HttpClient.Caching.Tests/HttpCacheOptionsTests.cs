@@ -21,10 +21,41 @@ public class HttpCacheOptionsTests
 
         // Assert
         options.DefaultExpiry.Should().Be(TimeSpan.FromMinutes(5));
+        options.DefaultHeaders.Should().NotBeNull().And.BeEmpty();
         options.CacheableMethods.Should().Contain(HttpMethod.Get);
         options.CacheableMethods.Should().Contain(HttpMethod.Head);
         options.CacheableStatusCodes.Should().Contain(HttpStatusCode.OK);
         options.KeyGenerator.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void DefaultHeaders_CanAddAndRetrieveHeaders()
+    {
+        // Arrange
+        var options = new HttpCacheOptions();
+
+        // Act
+        options.DefaultHeaders["Authorization"] = "Bearer token";
+        options.DefaultHeaders["X-API-Key"] = "api-key";
+
+        // Assert
+        options.DefaultHeaders.Should().HaveCount(2);
+        options.DefaultHeaders["Authorization"].Should().Be("Bearer token");
+        options.DefaultHeaders["X-API-Key"].Should().Be("api-key");
+    }
+
+    [Fact]
+    public void DefaultHeaders_IsCaseInsensitive()
+    {
+        // Arrange
+        var options = new HttpCacheOptions();
+
+        // Act
+        options.DefaultHeaders["authorization"] = "Bearer token";
+
+        // Assert
+        options.DefaultHeaders["Authorization"].Should().Be("Bearer token");
+        options.DefaultHeaders["AUTHORIZATION"].Should().Be("Bearer token");
     }
 
     [Fact]
@@ -36,7 +67,7 @@ public class HttpCacheOptionsTests
         var response = new HttpResponseMessage(HttpStatusCode.OK);
 
         // Act
-        var expiry = options.GetExpiry(request, response);
+        TimeSpan expiry = options.GetExpiry(request, response);
 
         // Assert
         expiry.Should().Be(options.DefaultExpiry);
@@ -49,13 +80,13 @@ public class HttpCacheOptionsTests
         var customExpiry = TimeSpan.FromMinutes(10);
         var options = new HttpCacheOptions
         {
-            GetExpiry = (req, resp) => customExpiry
+            GetExpiry = (req, resp) => customExpiry,
         };
         var request = new HttpRequestMessage(HttpMethod.Get, "https://api.example.com");
         var response = new HttpResponseMessage(HttpStatusCode.OK);
 
         // Act
-        var expiry = options.GetExpiry(request, response);
+        TimeSpan expiry = options.GetExpiry(request, response);
 
         // Assert
         expiry.Should().Be(customExpiry);
@@ -70,11 +101,11 @@ public class HttpCacheOptionsTests
         var response = new HttpResponseMessage(HttpStatusCode.OK);
         response.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue
         {
-            MaxAge = TimeSpan.FromMinutes(15)
+            MaxAge = TimeSpan.FromMinutes(15),
         };
 
         // Act
-        var expiry = options.GetExpiry(request, response);
+        TimeSpan expiry = options.GetExpiry(request, response);
 
         // Assert
         expiry.Should().Be(TimeSpan.FromMinutes(15));
@@ -89,11 +120,11 @@ public class HttpCacheOptionsTests
         var response = new HttpResponseMessage(HttpStatusCode.OK);
         response.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue
         {
-            MaxAge = TimeSpan.Zero
+            MaxAge = TimeSpan.Zero,
         };
 
         // Act
-        var expiry = options.GetExpiry(request, response);
+        TimeSpan expiry = options.GetExpiry(request, response);
 
         // Assert
         expiry.Should().Be(TimeSpan.Zero);
@@ -108,11 +139,11 @@ public class HttpCacheOptionsTests
         var response = new HttpResponseMessage(HttpStatusCode.OK);
         response.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue
         {
-            NoCache = true
+            NoCache = true,
         };
 
         // Act
-        var expiry = options.GetExpiry(request, response);
+        TimeSpan expiry = options.GetExpiry(request, response);
 
         // Assert
         expiry.Should().Be(TimeSpan.Zero);
@@ -127,11 +158,11 @@ public class HttpCacheOptionsTests
         var response = new HttpResponseMessage(HttpStatusCode.OK);
         response.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue
         {
-            NoStore = true
+            NoStore = true,
         };
 
         // Act
-        var expiry = options.GetExpiry(request, response);
+        TimeSpan expiry = options.GetExpiry(request, response);
 
         // Assert
         expiry.Should().Be(TimeSpan.Zero);
@@ -158,7 +189,7 @@ public class HttpCacheOptionsTests
         // Arrange
         var options = new HttpCacheOptions
         {
-            ShouldCache = (req, resp) => false
+            ShouldCache = (req, resp) => false,
         };
         var request = new HttpRequestMessage(HttpMethod.Get, "https://api.example.com");
         var response = new HttpResponseMessage(HttpStatusCode.OK);
@@ -179,7 +210,7 @@ public class HttpCacheOptionsTests
         var response = new HttpResponseMessage(HttpStatusCode.OK);
         response.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue
         {
-            NoCache = true
+            NoCache = true,
         };
 
         // Act
@@ -198,7 +229,7 @@ public class HttpCacheOptionsTests
         var response = new HttpResponseMessage(HttpStatusCode.OK);
         response.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue
         {
-            NoStore = true
+            NoStore = true,
         };
 
         // Act

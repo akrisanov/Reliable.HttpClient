@@ -70,7 +70,7 @@ builder.Services.AddHttpClient<MyApiClient>(c =>
     .WithHeader("Accept", "application/json"));
 ```
 
-For dynamic headers (like OAuth tokens), see [Custom Headers Documentation](configuration.md#custom-headers).
+For dynamic headers (like OAuth tokens), see [Caching with Custom Headers Documentation](caching.md#custom-headers-support).
 
 ### Step 2: Choose Your Architecture Pattern
 

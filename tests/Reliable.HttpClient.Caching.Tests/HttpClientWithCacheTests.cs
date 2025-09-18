@@ -1,10 +1,11 @@
+using System.Net;
+using System.Text;
+using System.Text.Json;
+
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
-using System.Net;
-using System.Text;
-using System.Text.Json;
 using Xunit;
 
 using Reliable.HttpClient.Caching.Abstractions;
@@ -40,6 +41,7 @@ public class HttpClientWithCacheTests
             _httpClient,
             _cache,
             _mockResponseHandler.Object,
+            cacheOptions: null,
             _mockCacheKeyGenerator.Object,
             _mockLogger.Object);
     }

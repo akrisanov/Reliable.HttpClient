@@ -3,7 +3,7 @@
 [![NuGet Version](https://img.shields.io/nuget/v/Reliable.HttpClient.Caching)](https://www.nuget.org/packages/Reliable.HttpClient.Caching/)
 
 Intelligent HTTP response caching extension for [Reliable.HttpClient](https://www.nuget.org/packages/Reliable.HttpClient/)
-with preset-based configuration and automatic memory management.
+with preset-based configuration, **custom headers support**, and automatic memory management.
 
 ## Installation
 
@@ -18,17 +18,36 @@ dotnet add package Reliable.HttpClient.Caching
 services.AddHttpClient<WeatherApiClient>()
     .AddResilienceWithMediumTermCache<WeatherResponse>(); // 10 minutes cache
 
-// Use anywhere
+// Configure default headers for all requests
+services.AddHttpClient<ApiClient>()
+    .AddMemoryCache(options => options
+        .WithDefaultExpiry(TimeSpan.FromMinutes(5))
+        .AddHeader("Authorization", "Bearer token")
+        .AddHeader("X-API-Version", "1.0"));
+
+// Use anywhere with per-request header customization
 public class WeatherService(CachedHttpClient<WeatherResponse> client)
 {
     public async Task<WeatherResponse> GetWeatherAsync(string city) =>
         await client.GetFromJsonAsync($"/weather?city={city}");
+
+    // Add custom headers per request
+    public async Task<WeatherResponse> GetWeatherWithTokenAsync(string city, string token)
+    {
+        var headers = new Dictionary<string, string>
+        {
+            ["Authorization"] = $"Bearer {token}",
+            ["X-Request-ID"] = Guid.NewGuid().ToString()
+        };
+        return await client.GetFromJsonAsync($"/weather?city={city}", headers);
+    }
 }
 ```
 
 ## Why This Package?
 
 - **Zero Configuration** – Works out of the box with sensible defaults
+- **✨ Custom Headers Support** – Default headers + per-request header customization with smart cache key generation
 - **Preset-Based Setup** – 6 ready-made configurations for common scenarios
 - **Automatic Dependencies** – No need to manually register `IMemoryCache`
 - **Combined APIs** – Resilience + Caching in one method call

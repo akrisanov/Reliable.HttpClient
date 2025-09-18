@@ -174,11 +174,107 @@ public class WeatherApiClient
 | `Configuration` | 30 minutes | 100 | App settings | Feature flags, configuration data |
 | `FileDownload` | 2 hours | 50 | Large files | Documents, images, downloads |
 
+## Custom Headers Support
+
+Both caching approaches provide comprehensive support for HTTP headers with intelligent cache key generation.
+
+### Default Headers Configuration
+
+Configure headers that will be added to all requests:
+
+```csharp
+// Using HttpCacheOptionsBuilder
+services.AddHttpClient<ApiClient>()
+    .AddMemoryCache(options => options
+        .WithDefaultExpiry(TimeSpan.FromMinutes(10))
+        .AddHeader("Authorization", "Bearer default-token")
+        .AddHeader("User-Agent", "MyApp/1.0")
+        .AddHeader("Accept", "application/json"));
+
+// Traditional configuration
+services.AddHttpClient<ApiClient>()
+    .AddMemoryCache<ApiResponse>(options =>
+    {
+        options.DefaultHeaders["Authorization"] = "Bearer default-token";
+        options.DefaultHeaders["User-Agent"] = "MyApp/1.0";
+    });
+```
+
+### Per-Request Custom Headers
+
+Add or override headers for specific requests:
+
+```csharp
+public class ApiService(IHttpClientWithCache client)
+{
+    public async Task<UserProfile> GetUserProfileAsync(int userId, string userToken)
+    {
+        var headers = new Dictionary<string, string>
+        {
+            ["Authorization"] = $"Bearer {userToken}",  // Overrides default
+            ["X-Request-ID"] = Guid.NewGuid().ToString(),
+            ["X-User-Context"] = userId.ToString()
+        };
+
+        return await client.GetAsync<UserProfile>($"/users/{userId}", headers);
+    }
+
+    public async Task<ApiResponse> CreateResourceAsync<T>(T data, string tenantId)
+    {
+        var headers = new Dictionary<string, string>
+        {
+            ["X-Tenant-ID"] = tenantId,
+            ["Content-Type"] = "application/json"
+        };
+
+        return await client.PostAsync<T, ApiResponse>("/resources", data, headers);
+    }
+}
+```
+
+### Smart Cache Key Generation
+
+Headers are automatically included in cache keys to ensure data isolation:
+
+```csharp
+// These requests will have different cache entries:
+await client.GetAsync<Data>("/api/data", new Dictionary<string, string>
+    { ["Authorization"] = "Bearer user1-token" });
+
+await client.GetAsync<Data>("/api/data", new Dictionary<string, string>
+    { ["Authorization"] = "Bearer user2-token" });
+
+// Cache keys will be something like:
+// "Data:/api/data#{Authorization=Bearer user1-token}"
+// "Data:/api/data#{Authorization=Bearer user2-token}"
+```
+
+### Generic Client Header Support
+
+The type-safe `CachedHttpClient<T>` also supports headers:
+
+```csharp
+public class WeatherService(CachedHttpClient<WeatherResponse> client)
+{
+    public async Task<WeatherResponse> GetWeatherWithLocationAsync(string city, string country)
+    {
+        var headers = new Dictionary<string, string>
+        {
+            ["Accept-Language"] = country.ToLower(),
+            ["X-Location-Priority"] = "city"
+        };
+
+        return await client.GetFromJsonAsync($"/weather?city={city}", headers);
+    }
+}
+```
+
 ### HttpCacheOptions
 
 | Property                        | Type         | Default      | Description                                   |
 |---------------------------------|--------------|--------------|-----------------------------------------------|
 | `DefaultExpiry`                 | `TimeSpan`   | `5 minutes`  | Default cache expiration time                 |
+| `DefaultHeaders`                | `IDictionary<string, string>` | `{}` | Headers added to all requests |
 | `MaxCacheSize`                  | `int?`       | `null`       | Maximum number of cached entries              |
 | `CacheOnlySuccessfulResponses`  | `bool`       | `true`       | Only cache 2xx responses                      |
 | `RespectCacheControlHeaders`    | `bool`       | `true`       | Honor HTTP Cache-Control headers              |

@@ -9,6 +9,7 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.8" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.8" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.8" />
   </ItemGroup>
 
   <ItemGroup>

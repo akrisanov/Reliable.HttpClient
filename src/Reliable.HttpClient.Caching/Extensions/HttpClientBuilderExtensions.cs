@@ -1,6 +1,9 @@
 using System.Net;
 
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 
 using Reliable.HttpClient.Caching.Abstractions;
 using Reliable.HttpClient.Caching.Generic.Extensions;
@@ -13,6 +16,52 @@ namespace Reliable.HttpClient.Caching.Extensions;
 /// </summary>
 public static class HttpClientBuilderExtensions
 {
+    /// <summary>
+    /// Adds memory caching with configurable options using a builder pattern
+    /// </summary>
+    /// <param name="builder">HttpClient builder</param>
+    /// <param name="configureOptions">Action to configure cache options using builder</param>
+    /// <returns>HttpClient builder for chaining</returns>
+    public static IHttpClientBuilder AddMemoryCache(
+        this IHttpClientBuilder builder,
+        Action<HttpCacheOptionsBuilder>? configureOptions = null)
+    {
+        var optionsBuilder = new HttpCacheOptionsBuilder();
+        configureOptions?.Invoke(optionsBuilder);
+        HttpCacheOptions options = optionsBuilder.Build();
+
+        return builder.AddMemoryCache(options);
+    }
+
+    /// <summary>
+    /// Adds memory caching with pre-built options
+    /// </summary>
+    /// <param name="builder">HttpClient builder</param>
+    /// <param name="options">Pre-configured cache options</param>
+    /// <returns>HttpClient builder for chaining</returns>
+    public static IHttpClientBuilder AddMemoryCache(
+        this IHttpClientBuilder builder,
+        HttpCacheOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        builder.Services.AddMemoryCache();
+        builder.Services.TryAddSingleton<IHttpResponseHandler, DefaultHttpResponseHandler>();
+        builder.Services.TryAddSingleton<ISimpleCacheKeyGenerator, DefaultSimpleCacheKeyGenerator>();
+
+        builder.Services.AddScoped(serviceProvider =>
+        {
+            System.Net.Http.HttpClient httpClient = serviceProvider.GetRequiredService<IHttpClientFactory>().CreateClient(builder.Name);
+            IMemoryCache cache = serviceProvider.GetRequiredService<IMemoryCache>();
+            IHttpResponseHandler responseHandler = serviceProvider.GetRequiredService<IHttpResponseHandler>();
+            ISimpleCacheKeyGenerator cacheKeyGenerator = serviceProvider.GetRequiredService<ISimpleCacheKeyGenerator>();
+            ILogger<HttpClientWithCache>? logger = serviceProvider.GetService<ILogger<HttpClientWithCache>>();
+
+            return new HttpClientWithCache(httpClient, cache, responseHandler, options, cacheKeyGenerator, logger);
+        });
+
+        return builder;
+    }
 
     /// <summary>
     /// Adds memory caching with a predefined preset using generic caching
@@ -34,6 +83,7 @@ public static class HttpClientBuilderExtensions
     private static void CopyPresetToOptions(HttpCacheOptions preset, HttpCacheOptions options)
     {
         options.DefaultExpiry = preset.DefaultExpiry;
+        options.DefaultHeaders = new Dictionary<string, string>(preset.DefaultHeaders, StringComparer.OrdinalIgnoreCase);
         options.MaxCacheSize = preset.MaxCacheSize;
         options.KeyGenerator = preset.KeyGenerator;
         options.CacheableStatusCodes = new HashSet<HttpStatusCode>(preset.CacheableStatusCodes);
@@ -149,7 +199,8 @@ public static class HttpClientBuilderExtensions
     /// <param name="builder">HttpClient builder</param>
     /// <returns>HttpClient builder for chaining</returns>
     public static IHttpClientBuilder AddResilienceWithShortTermCache<TResponse>(this IHttpClientBuilder builder)
-        => builder.AddResilienceWithCaching<TResponse>(configureResilience: null, options => CopyPresetToOptions(CachePresets.ShortTerm, options));
+        => builder.AddResilienceWithCaching<TResponse>(
+            configureResilience: null, options => CopyPresetToOptions(CachePresets.ShortTerm, options));
 
     /// <summary>
     /// Adds resilience with medium-term caching (10 minutes)
@@ -158,7 +209,8 @@ public static class HttpClientBuilderExtensions
     /// <param name="builder">HttpClient builder</param>
     /// <returns>HttpClient builder for chaining</returns>
     public static IHttpClientBuilder AddResilienceWithMediumTermCache<TResponse>(this IHttpClientBuilder builder)
-        => builder.AddResilienceWithCaching<TResponse>(configureResilience: null, options => CopyPresetToOptions(CachePresets.MediumTerm, options));
+        => builder.AddResilienceWithCaching<TResponse>(
+            configureResilience: null, options => CopyPresetToOptions(CachePresets.MediumTerm, options));
 
     /// <summary>
     /// Adds resilience with long-term caching (1 hour)
@@ -167,5 +219,6 @@ public static class HttpClientBuilderExtensions
     /// <param name="builder">HttpClient builder</param>
     /// <returns>HttpClient builder for chaining</returns>
     public static IHttpClientBuilder AddResilienceWithLongTermCache<TResponse>(this IHttpClientBuilder builder)
-        => builder.AddResilienceWithCaching<TResponse>(configureResilience: null, options => CopyPresetToOptions(CachePresets.LongTerm, options));
+        => builder.AddResilienceWithCaching<TResponse>(
+            configureResilience: null, options => CopyPresetToOptions(CachePresets.LongTerm, options));
 }
