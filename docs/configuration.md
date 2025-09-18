@@ -107,7 +107,7 @@ services.AddHttpClient<MyApiClient>()
 |------------------|-----------------------------------|----------------------------|----------------------------------------|
 | `BaseUrl`        | `string`                          | `""`                       | Base API URL                           |
 | `TimeoutSeconds` | `int`                             | `30`                       | Request timeout in seconds             |
-| `UserAgent`      | `string`                          | `"Reliable.HttpClient/1.1.0"` | User-Agent header                  |
+| `UserAgent`      | `string`                          | `"Reliable.HttpClient/1.2.0"` | User-Agent header                  |
 | `DefaultHeaders` | `IDictionary<string, string>`     | `{}`                       | Default headers for all requests. See [Advanced Usage](advanced-usage.md#header-management) for OAuth and dynamic headers. |
 | `Retry`          | `RetryOptions`                    | See below                  | Retry policy configuration             |
 | `CircuitBreaker` | `CircuitBreakerOptions`           | See below                  | Circuit breaker configuration          |

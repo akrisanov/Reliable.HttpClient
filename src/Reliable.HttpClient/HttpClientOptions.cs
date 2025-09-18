@@ -18,7 +18,7 @@ public class HttpClientOptions
     /// <summary>
     /// User-Agent for HTTP requests
     /// </summary>
-    public string UserAgent { get; set; } = "Reliable.HttpClient/1.1.0";
+    public string UserAgent { get; set; } = "Reliable.HttpClient/1.2.0";
 
     /// <summary>
     /// Default headers to add to all requests
