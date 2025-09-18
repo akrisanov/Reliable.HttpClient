@@ -114,6 +114,66 @@ public class HttpClientAdapterTests
         act.Should().Throw<ArgumentNullException>().WithParameterName("responseHandler");
     }
 
+    [Fact]
+    public async Task PutAsync_WithTypedResponse_CallsResponseHandler()
+    {
+        // Arrange
+        var httpClient = new System.Net.Http.HttpClient(new MockHttpMessageHandler("{\"id\": 1, \"name\": \"Updated\"}"));
+        var adapter = new HttpClientAdapter(httpClient, _mockResponseHandler.Object);
+        var request = new TestRequest { Name = "Updated Item" };
+        var expectedResponse = new TestResponse { Id = 1, Name = "Updated" };
+
+        _mockResponseHandler
+            .Setup(x => x.HandleAsync<TestResponse>(It.IsAny<HttpResponseMessage>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResponse);
+
+        // Act
+        TestResponse result = await adapter.PutAsync<TestRequest, TestResponse>("https://api.test.com/test", request);
+
+        // Assert
+        result.Should().Be(expectedResponse);
+        _mockResponseHandler.Verify(
+            x => x.HandleAsync<TestResponse>(It.IsAny<HttpResponseMessage>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WithTypedResponse_CallsResponseHandler()
+    {
+        // Arrange
+        var httpClient = new System.Net.Http.HttpClient(new MockHttpMessageHandler("{\"success\": true}"));
+        var adapter = new HttpClientAdapter(httpClient, _mockResponseHandler.Object);
+        var expectedResponse = new DeleteResponse { Success = true };
+
+        _mockResponseHandler
+            .Setup(x => x.HandleAsync<DeleteResponse>(It.IsAny<HttpResponseMessage>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResponse);
+
+        // Act
+        DeleteResponse result = await adapter.DeleteAsync<DeleteResponse>("https://api.test.com/test/1");
+
+        // Assert
+        result.Should().Be(expectedResponse);
+        _mockResponseHandler.Verify(
+            x => x.HandleAsync<DeleteResponse>(It.IsAny<HttpResponseMessage>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WithoutTypedResponse_ReturnsHttpResponseMessage()
+    {
+        // Arrange
+        var httpClient = new System.Net.Http.HttpClient(new MockHttpMessageHandler("Deleted"));
+        var adapter = new HttpClientAdapter(httpClient, _mockResponseHandler.Object);
+
+        // Act
+        HttpResponseMessage result = await adapter.DeleteAsync("https://api.test.com/test/1");
+
+        // Assert
+        result.Should().NotBeNull();
+        result.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
     private class TestRequest
     {
         public string Name { get; init; } = string.Empty;
@@ -123,6 +183,11 @@ public class HttpClientAdapterTests
     {
         public int Id { get; init; }
         public string Name { get; init; } = string.Empty;
+    }
+
+    private class DeleteResponse
+    {
+        public bool Success { get; init; }
     }
 
     private class MockHttpMessageHandler(string response) : HttpMessageHandler
