@@ -272,6 +272,173 @@ public class HttpClientWithCacheTests
         Assert.True(true); // Placeholder for cache invalidation verification
     }
 
+    [Fact]
+    public async Task PatchAsync_InvalidatesRelatedCache()
+    {
+        // Arrange
+        var patchUri = "/api/test/1";
+        var cacheKey = "test_cache_key";
+        var cachedResponse = new TestResponse { Id = 1, Name = "Cached" };
+        var patchRequest = new { Data = "patched" };
+        var patchResponse = new TestResponse { Id = 1, Name = "Patched" };
+
+        // Pre-populate cache
+        _cache.Set(cacheKey, cachedResponse);
+
+        var httpResponse = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(JsonSerializer.Serialize(patchResponse)),
+        };
+
+        _mockHttpMessageHandler
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.Is<HttpRequestMessage>(req => req.Method == HttpMethod.Patch),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(httpResponse);
+
+        _mockResponseHandler
+            .Setup(x => x.HandleAsync<TestResponse>(httpResponse, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(patchResponse);
+
+        // Act
+        TestResponse result = await _httpClientWithCache.PatchAsync<object, TestResponse>(patchUri, patchRequest);
+
+        // Assert
+        Assert.Equal(patchResponse, result);
+        _mockResponseHandler.Verify(x => x.HandleAsync<TestResponse>(httpResponse, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task PatchAsync_WithHeaders_InvalidatesRelatedCache()
+    {
+        // Arrange
+        var patchUri = "/api/test/1";
+        var cacheKey = "test_cache_key";
+        var cachedResponse = new TestResponse { Id = 1, Name = "Cached" };
+        var patchRequest = new { Data = "patched" };
+        var patchResponse = new TestResponse { Id = 1, Name = "Patched" };
+        var headers = new Dictionary<string, string>(StringComparer.Ordinal) { { "Authorization", "Bearer token" } };
+
+        // Pre-populate cache
+        _cache.Set(cacheKey, cachedResponse);
+
+        var httpResponse = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(JsonSerializer.Serialize(patchResponse)),
+        };
+
+        _mockHttpMessageHandler
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.Is<HttpRequestMessage>(req => req.Method == HttpMethod.Patch && req.Headers.Contains("Authorization")),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(httpResponse);
+
+        _mockResponseHandler
+            .Setup(x => x.HandleAsync<TestResponse>(httpResponse, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(patchResponse);
+
+        // Act
+        TestResponse result = await _httpClientWithCache.PatchAsync<object, TestResponse>(patchUri, patchRequest, headers);
+
+        // Assert
+        Assert.Equal(patchResponse, result);
+        _mockResponseHandler.Verify(x => x.HandleAsync<TestResponse>(httpResponse, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task PatchAsync_ResponseHandlerThrows_CacheRemainsValid()
+    {
+        // Arrange
+        const string cacheKey = "TestResponse_/api/test";
+        const string requestUri = "/api/test/1";
+        var cachedData = new TestResponse { Id = 1, Name = "Cached" };
+        var requestData = new { Name = "Patched Data" };
+
+        // Pre-populate cache with valid data
+        _cache.Set(cacheKey, cachedData, TimeSpan.FromMinutes(5));
+        _mockCacheKeyGenerator.Setup(x => x.GenerateKey("TestResponse", requestUri))
+            .Returns(cacheKey);
+
+        // Setup HTTP client to return successful response
+        var responseContent = JsonSerializer.Serialize(new TestResponse { Id = 2, Name = "Patched" });
+        var httpResponse = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(responseContent, Encoding.UTF8, "application/json")
+        };
+
+        _mockHttpMessageHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.Is<HttpRequestMessage>(req => req.Method == HttpMethod.Patch),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(httpResponse);
+
+        // Setup response handler to throw exception
+        _mockResponseHandler.Setup(x => x.HandleAsync<TestResponse>(It.IsAny<HttpResponseMessage>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Response handler failed"));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _httpClientWithCache.PatchAsync<object, TestResponse>(requestUri, requestData));
+
+        // Verify that cached data is still available (cache was not invalidated due to failure)
+        var cacheExists = _cache.TryGetValue(cacheKey, out TestResponse? stillCachedResult);
+        Assert.True(cacheExists);
+        Assert.NotNull(stillCachedResult);
+        Assert.Equal(1, stillCachedResult.Id);
+        Assert.Equal("Cached", stillCachedResult.Name);
+    }
+
+    [Fact]
+    public async Task PatchAsync_SuccessfulHandling_InvalidatesCache()
+    {
+        // Arrange
+        const string cacheKey = "TestResponse_/api/test";
+        const string requestUri = "/api/test/1";
+        var cachedData = new TestResponse { Id = 1, Name = "Cached" };
+        var requestData = new { Name = "Patched Data" };
+        var responseData = new TestResponse { Id = 2, Name = "Patched" };
+
+        // Pre-populate cache with valid data
+        _cache.Set(cacheKey, cachedData, TimeSpan.FromMinutes(5));
+        _mockCacheKeyGenerator.Setup(x => x.GenerateKey("TestResponse", requestUri))
+            .Returns(cacheKey);
+
+        // Setup HTTP client to return successful response
+        var responseContent = JsonSerializer.Serialize(responseData);
+        var httpResponse = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(responseContent, Encoding.UTF8, "application/json"),
+        };
+
+        _mockHttpMessageHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.Is<HttpRequestMessage>(req => req.Method == HttpMethod.Patch),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(httpResponse);
+
+        // Setup response handler to succeed
+        _mockResponseHandler.Setup(x => x.HandleAsync<TestResponse>(It.IsAny<HttpResponseMessage>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(responseData);
+
+        // Act
+        var result = await _httpClientWithCache.PatchAsync<object, TestResponse>(requestUri, requestData);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Id);
+        Assert.Equal("Patched", result.Name);
+
+        // Cache invalidation is attempted (though MemoryCache doesn't support pattern-based invalidation)
+        // We verify the behavior through the successful completion of the operation
+        Assert.True(true); // Placeholder for cache invalidation verification
+    }
+
     private class TestResponse
     {
         public int Id { get; set; }

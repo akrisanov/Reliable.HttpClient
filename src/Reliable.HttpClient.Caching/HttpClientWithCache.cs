@@ -164,6 +164,57 @@ public class HttpClientWithCache(
         return await PostAsync<TRequest, TResponse>(requestUri.ToString(), content, headers, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<TResponse> PatchAsync<TRequest, TResponse>(
+        string requestUri,
+        TRequest content,
+        CancellationToken cancellationToken = default) where TResponse : class
+    {
+        using HttpRequestMessage request = CreateRequestWithHeaders(HttpMethod.Patch, requestUri, _cacheOptions.DefaultHeaders);
+        request.Content = JsonContent.Create(content);
+
+        HttpResponseMessage response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        TResponse result = await _responseHandler.HandleAsync<TResponse>(response, cancellationToken).ConfigureAwait(false);
+
+        await InvalidateRelatedCacheAsync(requestUri).ConfigureAwait(false);
+
+        return result;
+    }
+
+    public async Task<TResponse> PatchAsync<TRequest, TResponse>(
+        Uri requestUri,
+        TRequest content,
+        CancellationToken cancellationToken = default) where TResponse : class
+    {
+        return await PatchAsync<TRequest, TResponse>(requestUri.ToString(), content, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<TResponse> PatchAsync<TRequest, TResponse>(
+        string requestUri,
+        TRequest content,
+        IDictionary<string, string> headers,
+        CancellationToken cancellationToken = default) where TResponse : class
+    {
+        Dictionary<string, string> allHeaders = MergeHeaders(_cacheOptions.DefaultHeaders, headers);
+        using HttpRequestMessage request = CreateRequestWithHeaders(HttpMethod.Patch, requestUri, allHeaders);
+        request.Content = JsonContent.Create(content);
+
+        HttpResponseMessage response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        TResponse result = await _responseHandler.HandleAsync<TResponse>(response, cancellationToken).ConfigureAwait(false);
+
+        await InvalidateRelatedCacheAsync(requestUri).ConfigureAwait(false);
+
+        return result;
+    }
+
+    public async Task<TResponse> PatchAsync<TRequest, TResponse>(
+        Uri requestUri,
+        TRequest content,
+        IDictionary<string, string> headers,
+        CancellationToken cancellationToken = default) where TResponse : class
+    {
+        return await PatchAsync<TRequest, TResponse>(requestUri.ToString(), content, headers, cancellationToken).ConfigureAwait(false);
+    }
+
     /// <inheritdoc />
     public async Task<TResponse> PutAsync<TRequest, TResponse>(
         string requestUri,
