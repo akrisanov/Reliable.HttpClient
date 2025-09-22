@@ -87,12 +87,12 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.8" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.8" />
     <!-- For release: uncomment PackageReference and comment out ProjectReference -->
-    <!-- <PackageReference Include="Reliable.HttpClient" Version="1.3.0" /> -->
+    <PackageReference Include="Reliable.HttpClient" Version="1.3.0" />
   </ItemGroup>
 
   <ItemGroup>
     <!-- For development and testing: use ProjectReference -->
-    <ProjectReference Include="../Reliable.HttpClient/Reliable.HttpClient.csproj" />
+    <!-- <ProjectReference Include="../Reliable.HttpClient/Reliable.HttpClient.csproj" /> -->
   </ItemGroup>
 
   <ItemGroup>
