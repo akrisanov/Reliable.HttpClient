@@ -164,6 +164,38 @@ public class HttpClientWithCache(
         return await PostAsync<TRequest, TResponse>(requestUri.ToString(), content, headers, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<HttpResponseMessage> PostAsync<TRequest>(
+        string requestUri,
+        TRequest content,
+        CancellationToken cancellationToken = default)
+    {
+        HttpResponseMessage response = await _httpClient.PostAsJsonAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
+
+        // Invalidate cache only after successful HTTP request (before response handler to maintain adapter contract)
+        await InvalidateRelatedCacheAsync(requestUri).ConfigureAwait(false);
+
+        return response;
+    }
+
+    public async Task<HttpResponseMessage> PostAsync<TRequest>(
+        string requestUri,
+        TRequest content,
+        IDictionary<string, string> headers,
+        CancellationToken cancellationToken = default)
+    {
+        Dictionary<string, string> allHeaders = MergeHeaders(_cacheOptions.DefaultHeaders, headers);
+        using HttpRequestMessage request = CreateRequestWithHeaders(HttpMethod.Post, requestUri, allHeaders);
+        request.Content = JsonContent.Create(content);
+
+        HttpResponseMessage response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+
+        // Invalidate cache only after successful HTTP request (before response handler to maintain adapter contract)
+        await InvalidateRelatedCacheAsync(requestUri).ConfigureAwait(false);
+
+        return response;
+    }
+
+    /// <inheritdoc />
     public async Task<TResponse> PatchAsync<TRequest, TResponse>(
         string requestUri,
         TRequest content,
@@ -175,11 +207,13 @@ public class HttpClientWithCache(
         HttpResponseMessage response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
         TResponse result = await _responseHandler.HandleAsync<TResponse>(response, cancellationToken).ConfigureAwait(false);
 
+        // Invalidate cache only after successful HTTP request (before response handler to maintain adapter contract)
         await InvalidateRelatedCacheAsync(requestUri).ConfigureAwait(false);
 
         return result;
     }
 
+    /// <inheritdoc />
     public async Task<TResponse> PatchAsync<TRequest, TResponse>(
         Uri requestUri,
         TRequest content,
@@ -188,6 +222,7 @@ public class HttpClientWithCache(
         return await PatchAsync<TRequest, TResponse>(requestUri.ToString(), content, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public async Task<TResponse> PatchAsync<TRequest, TResponse>(
         string requestUri,
         TRequest content,
@@ -201,11 +236,13 @@ public class HttpClientWithCache(
         HttpResponseMessage response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
         TResponse result = await _responseHandler.HandleAsync<TResponse>(response, cancellationToken).ConfigureAwait(false);
 
+        // Invalidate cache only after successful HTTP request (before response handler to maintain adapter contract)
         await InvalidateRelatedCacheAsync(requestUri).ConfigureAwait(false);
 
         return result;
     }
 
+    /// <inheritdoc />
     public async Task<TResponse> PatchAsync<TRequest, TResponse>(
         Uri requestUri,
         TRequest content,
@@ -213,6 +250,42 @@ public class HttpClientWithCache(
         CancellationToken cancellationToken = default) where TResponse : class
     {
         return await PatchAsync<TRequest, TResponse>(requestUri.ToString(), content, headers, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<HttpResponseMessage> PatchAsync<TRequest>(
+        string requestUri,
+        TRequest content,
+        CancellationToken cancellationToken = default)
+    {
+        using HttpRequestMessage request = CreateRequestWithHeaders(HttpMethod.Patch, requestUri, _cacheOptions.DefaultHeaders);
+        request.Content = JsonContent.Create(content);
+
+        HttpResponseMessage response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+
+        // Invalidate cache only after successful HTTP request (before response handler to maintain adapter contract)
+        await InvalidateRelatedCacheAsync(requestUri).ConfigureAwait(false);
+
+        return response;
+    }
+
+    /// <inheritdoc />
+    public async Task<HttpResponseMessage> PatchAsync<TRequest>(
+        string requestUri,
+        TRequest content,
+        IDictionary<string, string> headers,
+        CancellationToken cancellationToken = default)
+    {
+        Dictionary<string, string> allHeaders = MergeHeaders(_cacheOptions.DefaultHeaders, headers);
+        using HttpRequestMessage request = CreateRequestWithHeaders(HttpMethod.Patch, requestUri, allHeaders);
+        request.Content = JsonContent.Create(content);
+
+        HttpResponseMessage response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+
+        // Invalidate cache only after successful HTTP request (before response handler to maintain adapter contract)
+        await InvalidateRelatedCacheAsync(requestUri).ConfigureAwait(false);
+
+        return response;
     }
 
     /// <inheritdoc />
@@ -280,6 +353,34 @@ public class HttpClientWithCache(
         await InvalidateRelatedCacheAsync(requestUri).ConfigureAwait(false);
 
         return result;
+    }
+
+    public async Task<HttpResponseMessage> DeleteAsync(
+        string requestUri,
+        CancellationToken cancellationToken = default)
+    {
+        HttpResponseMessage response = await _httpClient.DeleteAsync(requestUri, cancellationToken).ConfigureAwait(false);
+
+        // Invalidate cache only after successful HTTP request (before response handler to maintain adapter contract)
+        await InvalidateRelatedCacheAsync(requestUri).ConfigureAwait(false);
+
+        return response;
+    }
+
+    public async Task<HttpResponseMessage> DeleteAsync(
+        string requestUri,
+        IDictionary<string, string> headers,
+        CancellationToken cancellationToken = default)
+    {
+        Dictionary<string, string> allHeaders = MergeHeaders(_cacheOptions.DefaultHeaders, headers);
+        using HttpRequestMessage request = CreateRequestWithHeaders(HttpMethod.Delete, requestUri, allHeaders);
+
+        HttpResponseMessage response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+
+        // Invalidate cache only after successful HTTP request (before response handler to maintain adapter contract)
+        await InvalidateRelatedCacheAsync(requestUri).ConfigureAwait(false);
+
+        return response;
     }
 
     /// <inheritdoc />
@@ -390,31 +491,13 @@ public class HttpClientWithCache(
         Uri requestUri, IDictionary<string, string> headers, CancellationToken cancellationToken) =>
         GetAsync<TResponse>(requestUri, headers, cacheDuration: null, cancellationToken);
 
-    async Task<HttpResponseMessage> IHttpClientAdapter.PostAsync<TRequest>(
-        string requestUri, TRequest content, CancellationToken cancellationToken)
-    {
-        HttpResponseMessage response = await _httpClient.PostAsJsonAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
+    Task<HttpResponseMessage> IHttpClientAdapter.PostAsync<TRequest>(
+        string requestUri, TRequest content, CancellationToken cancellationToken) =>
+        PostAsync(requestUri, content, cancellationToken);
 
-        // Invalidate cache only after successful HTTP request (before response handler to maintain adapter contract)
-        await InvalidateRelatedCacheAsync(requestUri).ConfigureAwait(false);
-
-        return response;
-    }
-
-    async Task<HttpResponseMessage> IHttpClientAdapter.PostAsync<TRequest>(
-        string requestUri, TRequest content, IDictionary<string, string> headers, CancellationToken cancellationToken)
-    {
-        Dictionary<string, string> allHeaders = MergeHeaders(_cacheOptions.DefaultHeaders, headers);
-        using HttpRequestMessage request = CreateRequestWithHeaders(HttpMethod.Post, requestUri, allHeaders);
-        request.Content = JsonContent.Create(content);
-
-        HttpResponseMessage response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
-
-        // Invalidate cache only after successful HTTP request (before response handler to maintain adapter contract)
-        await InvalidateRelatedCacheAsync(requestUri).ConfigureAwait(false);
-
-        return response;
-    }
+    Task<HttpResponseMessage> IHttpClientAdapter.PostAsync<TRequest>(
+        string requestUri, TRequest content, IDictionary<string, string> headers, CancellationToken cancellationToken) =>
+        PostAsync(requestUri, content, headers, cancellationToken);
 
     Task<TResponse> IHttpClientAdapter.PostAsync<TRequest, TResponse>(
         string requestUri, TRequest content, CancellationToken cancellationToken) =>
@@ -432,30 +515,6 @@ public class HttpClientWithCache(
         string requestUri, TRequest content, IDictionary<string, string> headers, CancellationToken cancellationToken) =>
         PutAsync<TRequest, TResponse>(requestUri, content, headers, cancellationToken);
 
-    async Task<HttpResponseMessage> IHttpClientAdapter.DeleteAsync(string requestUri, CancellationToken cancellationToken)
-    {
-        HttpResponseMessage response = await _httpClient.DeleteAsync(requestUri, cancellationToken).ConfigureAwait(false);
-
-        // Invalidate cache only after successful HTTP request (before response handler to maintain adapter contract)
-        await InvalidateRelatedCacheAsync(requestUri).ConfigureAwait(false);
-
-        return response;
-    }
-
-    async Task<HttpResponseMessage> IHttpClientAdapter.DeleteAsync(
-        string requestUri, IDictionary<string, string> headers, CancellationToken cancellationToken)
-    {
-        Dictionary<string, string> allHeaders = MergeHeaders(_cacheOptions.DefaultHeaders, headers);
-        using HttpRequestMessage request = CreateRequestWithHeaders(HttpMethod.Delete, requestUri, allHeaders);
-
-        HttpResponseMessage response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
-
-        // Invalidate cache only after successful HTTP request (before response handler to maintain adapter contract)
-        await InvalidateRelatedCacheAsync(requestUri).ConfigureAwait(false);
-
-        return response;
-    }
-
     Task<TResponse> IHttpClientAdapter.DeleteAsync<TResponse>(
         string requestUri, CancellationToken cancellationToken) =>
         DeleteAsync<TResponse>(requestUri, cancellationToken);
@@ -463,4 +522,11 @@ public class HttpClientWithCache(
     Task<TResponse> IHttpClientAdapter.DeleteAsync<TResponse>(
         string requestUri, IDictionary<string, string> headers, CancellationToken cancellationToken) =>
         DeleteAsync<TResponse>(requestUri, headers, cancellationToken);
+
+    Task<HttpResponseMessage> IHttpClientAdapter.DeleteAsync(string requestUri, CancellationToken cancellationToken) =>
+        DeleteAsync(requestUri, cancellationToken);
+
+    Task<HttpResponseMessage> IHttpClientAdapter.DeleteAsync(
+        string requestUri, IDictionary<string, string> headers, CancellationToken cancellationToken) =>
+        DeleteAsync(requestUri, headers, cancellationToken);
 }
