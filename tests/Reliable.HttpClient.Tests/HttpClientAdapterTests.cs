@@ -95,6 +95,86 @@ public class HttpClientAdapterTests
         result.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
+    [Fact]
+    public async Task PatchAsync_WithTypedResponse_CallsResponseHandler()
+    {
+        // Arrange
+        var httpClient = new System.Net.Http.HttpClient(new MockHttpMessageHandler("{\"id\": 1, \"name\": \"Patched\"}"));
+        var adapter = new HttpClientAdapter(httpClient, _mockResponseHandler.Object);
+        var request = new TestRequest { Name = "Patched Item" };
+        var expectedResponse = new TestResponse { Id = 1, Name = "Patched" };
+
+        _mockResponseHandler
+            .Setup(x => x.HandleAsync<TestResponse>(It.IsAny<HttpResponseMessage>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResponse);
+
+        // Act
+        TestResponse result = await adapter.PatchAsync<TestRequest, TestResponse>("https://api.test.com/test/1", request);
+
+        // Assert
+        result.Should().Be(expectedResponse);
+        _mockResponseHandler.Verify(
+            x => x.HandleAsync<TestResponse>(It.IsAny<HttpResponseMessage>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task PatchAsync_WithHeaders_CallsResponseHandler()
+    {
+        // Arrange
+        var httpClient = new System.Net.Http.HttpClient(new MockHttpMessageHandler("{\"id\": 1, \"name\": \"Patched\"}"));
+        var adapter = new HttpClientAdapter(httpClient, _mockResponseHandler.Object);
+        var request = new TestRequest { Name = "Patched Item" };
+        var headers = new Dictionary<string, string>(StringComparer.Ordinal) { { "Authorization", "Bearer token" } };
+        var expectedResponse = new TestResponse { Id = 1, Name = "Patched" };
+
+        _mockResponseHandler
+            .Setup(x => x.HandleAsync<TestResponse>(It.IsAny<HttpResponseMessage>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResponse);
+
+        // Act
+        TestResponse result = await adapter.PatchAsync<TestRequest, TestResponse>("https://api.test.com/test/1", request, headers);
+
+        // Assert
+        result.Should().Be(expectedResponse);
+        _mockResponseHandler.Verify(
+            x => x.HandleAsync<TestResponse>(It.IsAny<HttpResponseMessage>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task PatchAsync_WithoutTypedResponse_ReturnsHttpResponseMessage()
+    {
+        // Arrange
+        var httpClient = new System.Net.Http.HttpClient(new MockHttpMessageHandler("Patched"));
+        var adapter = new HttpClientAdapter(httpClient, _mockResponseHandler.Object);
+        var request = new TestRequest { Name = "Patched Item" };
+
+        // Act
+        HttpResponseMessage result = await adapter.PatchAsync("https://api.test.com/test/1", request);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task PatchAsync_WithHeaders_WithoutTypedResponse_ReturnsHttpResponseMessage()
+    {
+        // Arrange
+        var httpClient = new System.Net.Http.HttpClient(new MockHttpMessageHandler("Patched"));
+        var adapter = new HttpClientAdapter(httpClient, _mockResponseHandler.Object);
+        var request = new TestRequest { Name = "Patched Item" };
+        var headers = new Dictionary<string, string>(StringComparer.Ordinal) { { "Authorization", "Bearer token" } };
+
+        // Act
+        HttpResponseMessage result = await adapter.PatchAsync("https://api.test.com/test/1", request, headers);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
     // NOTE: HttpClientAdapter is designed for DI container usage where dependencies are guaranteed.
     // Manual constructor parameter validation is not needed as DI container handles dependency resolution.
     // These tests are removed as they tested anti-patterns for the intended usage.

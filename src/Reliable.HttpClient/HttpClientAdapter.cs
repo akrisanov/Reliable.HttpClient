@@ -10,6 +10,7 @@ public class HttpClientAdapter(System.Net.Http.HttpClient httpClient, IHttpRespo
     private readonly System.Net.Http.HttpClient _httpClient = httpClient;
     private readonly IHttpResponseHandler _responseHandler = responseHandler;
 
+    /// <inheritdoc />
     public async Task<TResponse> GetAsync<TResponse>(
         string requestUri,
         CancellationToken cancellationToken = default) where TResponse : class
@@ -18,6 +19,7 @@ public class HttpClientAdapter(System.Net.Http.HttpClient httpClient, IHttpRespo
         return await _responseHandler.HandleAsync<TResponse>(response, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public async Task<TResponse> GetAsync<TResponse>(
         string requestUri,
         IDictionary<string, string>? headers,
@@ -32,6 +34,7 @@ public class HttpClientAdapter(System.Net.Http.HttpClient httpClient, IHttpRespo
             HttpMethod.Get, requestUri, content: null, headers, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public async Task<TResponse> GetAsync<TResponse>(
         Uri requestUri,
         CancellationToken cancellationToken = default) where TResponse : class
@@ -40,6 +43,7 @@ public class HttpClientAdapter(System.Net.Http.HttpClient httpClient, IHttpRespo
         return await _responseHandler.HandleAsync<TResponse>(response, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public async Task<TResponse> GetAsync<TResponse>(
         Uri requestUri,
         IDictionary<string, string>? headers,
@@ -54,6 +58,7 @@ public class HttpClientAdapter(System.Net.Http.HttpClient httpClient, IHttpRespo
             HttpMethod.Get, requestUri, content: null, headers, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public async Task<TResponse> PostAsync<TRequest, TResponse>(
         string requestUri,
         TRequest content,
@@ -65,6 +70,7 @@ public class HttpClientAdapter(System.Net.Http.HttpClient httpClient, IHttpRespo
         return await _responseHandler.HandleAsync<TResponse>(response, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public async Task<TResponse> PostAsync<TRequest, TResponse>(
         string requestUri,
         TRequest content,
@@ -75,6 +81,7 @@ public class HttpClientAdapter(System.Net.Http.HttpClient httpClient, IHttpRespo
             HttpMethod.Post, requestUri, JsonContent.Create(content), headers, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public async Task<HttpResponseMessage> PostAsync<TRequest>(
         string requestUri,
         TRequest content,
@@ -83,6 +90,7 @@ public class HttpClientAdapter(System.Net.Http.HttpClient httpClient, IHttpRespo
         return await _httpClient.PostAsJsonAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public async Task<HttpResponseMessage> PostAsync<TRequest>(
         string requestUri,
         TRequest content,
@@ -93,6 +101,49 @@ public class HttpClientAdapter(System.Net.Http.HttpClient httpClient, IHttpRespo
             HttpMethod.Post, requestUri, JsonContent.Create(content), headers, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
+    public async Task<TResponse> PatchAsync<TRequest, TResponse>(
+        string requestUri,
+        TRequest content,
+        CancellationToken cancellationToken = default) where TResponse : class
+    {
+        return await SendWithResponseHandlerAsync<TResponse>(
+            HttpMethod.Patch, requestUri, JsonContent.Create(content), cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<TResponse> PatchAsync<TRequest, TResponse>(
+        string requestUri,
+        TRequest content,
+        IDictionary<string, string> headers,
+        CancellationToken cancellationToken = default) where TResponse : class
+    {
+        return await SendWithResponseHandlerAsync<TResponse>(
+            HttpMethod.Patch, requestUri, JsonContent.Create(content), headers, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<HttpResponseMessage> PatchAsync<TRequest>(
+        string requestUri,
+        TRequest content,
+        CancellationToken cancellationToken = default)
+    {
+        return await SendAsync(
+            HttpMethod.Patch, requestUri, JsonContent.Create(content), cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<HttpResponseMessage> PatchAsync<TRequest>(
+        string requestUri,
+        TRequest content,
+        IDictionary<string, string> headers,
+        CancellationToken cancellationToken = default)
+    {
+        return await SendAsync(
+            HttpMethod.Patch, requestUri, JsonContent.Create(content), headers, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public async Task<TResponse> PutAsync<TRequest, TResponse>(
         string requestUri,
         TRequest content,
@@ -102,6 +153,7 @@ public class HttpClientAdapter(System.Net.Http.HttpClient httpClient, IHttpRespo
         return await _responseHandler.HandleAsync<TResponse>(response, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public async Task<TResponse> PutAsync<TRequest, TResponse>(
         string requestUri,
         TRequest content,
@@ -112,6 +164,7 @@ public class HttpClientAdapter(System.Net.Http.HttpClient httpClient, IHttpRespo
             HttpMethod.Put, requestUri, JsonContent.Create(content), headers, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public async Task<HttpResponseMessage> DeleteAsync(
         string requestUri,
         CancellationToken cancellationToken = default)
@@ -119,6 +172,7 @@ public class HttpClientAdapter(System.Net.Http.HttpClient httpClient, IHttpRespo
         return await _httpClient.DeleteAsync(requestUri, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public async Task<HttpResponseMessage> DeleteAsync(
         string requestUri,
         IDictionary<string, string> headers,
@@ -127,6 +181,7 @@ public class HttpClientAdapter(System.Net.Http.HttpClient httpClient, IHttpRespo
         return await SendAsync(HttpMethod.Delete, requestUri, content: null, headers, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public async Task<TResponse> DeleteAsync<TResponse>(
         string requestUri,
         CancellationToken cancellationToken = default) where TResponse : class
@@ -135,6 +190,7 @@ public class HttpClientAdapter(System.Net.Http.HttpClient httpClient, IHttpRespo
         return await _responseHandler.HandleAsync<TResponse>(response, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public async Task<TResponse> DeleteAsync<TResponse>(
         string requestUri,
         IDictionary<string, string> headers,
@@ -179,6 +235,21 @@ public class HttpClientAdapter(System.Net.Http.HttpClient httpClient, IHttpRespo
     }
 
     /// <summary>
+    /// Sends HTTP request with response handler for typed responses
+    /// </summary>
+    private async Task<TResponse> SendWithResponseHandlerAsync<TResponse>(
+        HttpMethod method,
+        string requestUri,
+        HttpContent? content,
+        CancellationToken cancellationToken) where TResponse : class
+    {
+        using var request = new HttpRequestMessage(method, requestUri) { Content = content };
+
+        HttpResponseMessage response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        return await _responseHandler.HandleAsync<TResponse>(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// Sends HTTP request returning raw HttpResponseMessage
     /// </summary>
     private async Task<HttpResponseMessage> SendAsync(
@@ -190,6 +261,20 @@ public class HttpClientAdapter(System.Net.Http.HttpClient httpClient, IHttpRespo
     {
         using var request = new HttpRequestMessage(method, requestUri) { Content = content };
         AddHeaders(request, headers);
+
+        return await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Sends HTTP request returning raw HttpResponseMessage
+    /// </summary>
+    private async Task<HttpResponseMessage> SendAsync(
+        HttpMethod method,
+        string requestUri,
+        HttpContent? content,
+        CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(method, requestUri) { Content = content };
 
         return await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
     }

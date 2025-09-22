@@ -63,6 +63,7 @@ public sealed class HttpCacheOptionsBuilder
         {
             throw new ArgumentException($"'{nameof(name)}' cannot be null or whitespace.", nameof(name));
         }
+
         ArgumentNullException.ThrowIfNull(value);
 
         _options.DefaultHeaders[name] = value;
@@ -84,6 +85,7 @@ public sealed class HttpCacheOptionsBuilder
         {
             _options.DefaultHeaders[header.Key] = header.Value;
         }
+
         return this;
     }
 

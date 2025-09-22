@@ -112,6 +112,64 @@ public interface IHttpClientAdapter
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Performs PATCH request
+    /// </summary>
+    /// <typeparam name="TRequest">Request content type</typeparam>
+    /// <typeparam name="TResponse">Response type after deserialization</typeparam>
+    /// <param name="requestUri">Request URI</param>
+    /// <param name="content">Request content</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Typed response</returns>
+    Task<TResponse> PatchAsync<TRequest, TResponse>(
+        string requestUri,
+        TRequest content,
+        CancellationToken cancellationToken = default) where TResponse : class;
+
+    /// <summary>
+    /// Performs PATCH request with custom headers
+    /// </summary>
+    /// <typeparam name="TRequest">Request content type</typeparam>
+    /// <typeparam name="TResponse">Response type after deserialization</typeparam>
+    /// <param name="requestUri">Request URI</param>
+    /// <param name="content">Request content</param>
+    /// <param name="headers">Custom headers to add to the request</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Typed response</returns>
+    Task<TResponse> PatchAsync<TRequest, TResponse>(
+        string requestUri,
+        TRequest content,
+        IDictionary<string, string> headers,
+        CancellationToken cancellationToken = default) where TResponse : class;
+
+    /// <summary>
+    /// Performs PATCH request
+    /// </summary>
+    /// <typeparam name="TRequest">Request content type</typeparam>
+    /// <param name="requestUri">Request URI</param>
+    /// <param name="content">Request content</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>HTTP response message</returns>
+    Task<HttpResponseMessage> PatchAsync<TRequest>(
+        string requestUri,
+        TRequest content,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Performs PATCH request with custom headers
+    /// </summary>
+    /// <typeparam name="TRequest">Request content type</typeparam>
+    /// <param name="requestUri">Request URI</param>
+    /// <param name="content">Request content</param>
+    /// <param name="headers">Custom headers to add to the request</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>HTTP response message</returns>
+    Task<HttpResponseMessage> PatchAsync<TRequest>(
+        string requestUri,
+        TRequest content,
+        IDictionary<string, string> headers,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Performs PUT request
     /// </summary>
     /// <typeparam name="TRequest">Request content type</typeparam>

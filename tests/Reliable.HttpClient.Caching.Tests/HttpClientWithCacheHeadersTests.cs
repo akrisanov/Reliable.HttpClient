@@ -304,6 +304,51 @@ public class HttpClientWithCacheHeadersTests : IDisposable
             Times.Once);
     }
 
+    [Fact]
+    public async Task PatchAsync_WithCustomHeaders_PassesHeadersCorrectly()
+    {
+        // Arrange
+        var requestUri = "/patch/1";
+        var requestData = new { Name = "Patched Item" };
+        var customHeaders = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["X-Patch-ID"] = "patch-789",
+            ["Content-Type"] = "application/json",
+        };
+
+        HttpRequestMessage? capturedRequest = null;
+
+        _mockHttpMessageHandler
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
+            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"id": 1, "name": "Patched Item"}""", Encoding.UTF8, "application/json"),
+            });
+
+        _mockResponseHandler
+            .Setup(x => x.HandleAsync<TestModel>(It.IsAny<HttpResponseMessage>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TestModel { Id = 1, Name = "Patched Item" });
+
+        // Act
+        await _httpClientWithCache.PatchAsync<object, TestModel>(requestUri, requestData, customHeaders);
+
+        // Assert
+        capturedRequest.Should().NotBeNull();
+        capturedRequest!.Method.Should().Be(HttpMethod.Patch);
+
+        // Verify headers are included - check both request headers and content headers
+        IEnumerable<KeyValuePair<string, IEnumerable<string>>> allHeaders = capturedRequest.Headers.Concat(
+            capturedRequest.Content?.Headers ?? Enumerable.Empty<KeyValuePair<string, IEnumerable<string>>>());
+
+        allHeaders.Should().Contain(h => h.Key == "X-Default-Header" && h.Value.Contains("default-value"));
+        allHeaders.Should().Contain(h => h.Key == "X-Patch-ID" && h.Value.Contains("patch-789"));
+    }
+
     private void SetupHttpResponse(HttpStatusCode statusCode, string content)
     {
         _mockHttpMessageHandler
