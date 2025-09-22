@@ -4,46 +4,57 @@
     Directory.Build.props -->
     <AssemblyName>Reliable.HttpClient</AssemblyName>
     <PackageId>Reliable.HttpClient</PackageId>
-    <Version>1.2.0</Version>
-    <PackageReleaseNotes>🎉 v1.2.0 Release - Custom Headers Support &amp; OAuth Integration
+    <Version>1.3.0</Version>
+    <PackageReleaseNotes>🎉 v1.3.0 Release - PATCH Method Support &amp; Enhanced HTTP Operations
 
       ✨ Major New Features:
+      • Complete HTTP PATCH method support in IHttpClientAdapter and HttpClientAdapter
+      • Four PATCH method overloads: typed responses, raw HttpResponseMessage, with/without headers
+      • Full header support for PATCH operations including OAuth and authentication scenarios
+      • Comprehensive JSON serialization support for PATCH request bodies
+      • Modern C# 12 implementation with file-scoped namespaces and target-typed new expressions
+
+      🔧 API Enhancements:
+      • PatchAsync&lt;TRequest, TResponse&gt;(uri, request) - Typed request/response with response
+      handler
+      • PatchAsync&lt;TRequest, TResponse&gt;(uri, request, headers) - With custom headers support
+      • PatchAsync&lt;TRequest&gt;(uri, request) - Returns raw HttpResponseMessage
+      • PatchAsync&lt;TRequest&gt;(uri, request, headers) - Raw response with headers
+      • Consistent API patterns matching existing GET, POST, PUT, DELETE methods
+      • Full integration with existing retry policies and circuit breakers
+
+      🎯 Key Use Cases:
+      • RESTful API updates with partial resource modification
+      • JSON Merge Patch and JSON Patch operations
+      • Incremental data updates with authentication headers
+      • Resource versioning and conditional updates
+      • Microservice communication with PATCH semantics
+
+      🚀 Quick Start:
+      // Typed PATCH with response handling
+      var updated = await client.PatchAsync&lt;UpdateRequest, UserResponse&gt;("/users/123",
+      request);
+
+      // PATCH with custom headers
+      await client.PatchAsync("/api/resource", data, headers);
+
+      🔄 Previous Features (v1.2.0):
       • Comprehensive custom headers support for OAuth, authentication, and API integration
       • DefaultHeaders property for static headers across all requests
       • Per-request headers via IHttpClientAdapter method overloads
-      • Fluent header management in HttpClientOptionsBuilder (WithHeader, WithHeaders, WithoutHeader)
-      • Extensive OAuth token patterns and multi-tenant header examples
-      • Header validation and sanitization utilities
-      • Dynamic token refresh patterns for authentication APIs
-
-      🔧 API Enhancements:
-      • All HTTP methods (GET, POST, PUT, DELETE) now support custom headers
-      • Case-insensitive header handling with proper validation
-      • Helper methods in HttpClientAdapter for code deduplication
-      • Improved DI container usage patterns (removed unnecessary constructor validation)
+      • Fluent header management in HttpClientOptionsBuilder
       • Enhanced documentation with progressive disclosure structure
-
-      🎯 Key Use Cases:
-      • OAuth APIs with dynamic token management → Custom headers per request
-      • Multi-tenant SaaS applications → Tenant-specific headers
-      • API versioning and content negotiation → Version-aware header management
-      • HMAC/signature authentication → Custom authentication headers
-      • Request tracing and correlation → Dynamic correlation headers
-
-      🚀 Quick Start:
-      // Static headers
-      .AddResilience(builder => builder.WithHeader("X-API-Key", "key"))
-      
-      // Dynamic headers per request
-      await client.GetAsync&lt;Data&gt;("/endpoint", headers);
 
       📚 Full documentation: https://github.com/akrisanov/Reliable.HttpClient
 
       ⚡ Breaking Changes: None - fully backward compatible</PackageReleaseNotes>
     <Authors>Andrey Krisanov</Authors>
     <Company></Company>
-    <Description>Production-ready HttpClient resilience ecosystem with comprehensive custom headers support, OAuth integration, universal response handlers, retry policies, and circuit breakers. Zero configuration required.</Description>
-    <PackageTags>httpclient;resilience;polly;retry;circuit-breaker;custom-headers;oauth;authentication;universal-handlers;substitution;rest-api;dotnet</PackageTags>
+    <Description>Production-ready HttpClient resilience ecosystem with comprehensive custom headers
+      support, OAuth integration, universal response handlers, retry policies, and circuit breakers.
+      Zero configuration required.</Description>
+    <PackageTags>
+      httpclient;resilience;polly;retry;circuit-breaker;custom-headers;oauth;authentication;universal-handlers;substitution;rest-api;dotnet</PackageTags>
     <RepositoryUrl>https://github.com/akrisanov/Reliable.HttpClient</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
