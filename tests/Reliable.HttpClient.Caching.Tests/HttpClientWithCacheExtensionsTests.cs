@@ -72,8 +72,8 @@ public class HttpClientWithCacheExtensionsTests
         var httpClientWithCache = serviceProvider.GetRequiredService<IHttpClientWithCache>() as HttpClientWithCache;
         httpClientWithCache.Should().NotBeNull();
 
-        // Проверяем, что HttpCacheOptions правильно настроены для MediumTerm preset
-        // Используем IOptionsSnapshot для получения настроек именованного клиента "KodySuCached"
+        // Ensure that HttpCacheOptions configured to MediumTerm cache preset
+        // Using IOptionsSnapshot to get settings for particular named HTTP client
         IOptionsSnapshot<HttpCacheOptions> optionsSnapshot = serviceProvider.GetRequiredService<IOptionsSnapshot<HttpCacheOptions>>();
         HttpCacheOptions registeredOptions = optionsSnapshot.Get(clientName);
 
@@ -137,5 +137,27 @@ public class HttpClientWithCacheExtensionsTests
             .AddResilientHttpClientWithCache(clientName);
 
         act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void AddHttpClientWithCache_CanResolveConcreteType_SameInstance()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddHttpClient();
+        services.AddSingleton<IHttpResponseHandler, DefaultHttpResponseHandler>();
+        services.AddHttpClientWithCache("TestClient");
+
+        ServiceProvider serviceProvider = services.BuildServiceProvider();
+
+        // Act
+        HttpClientWithCache? concrete = serviceProvider.GetService<HttpClientWithCache>();
+        IHttpClientWithCache? abstraction = serviceProvider.GetService<IHttpClientWithCache>();
+
+        // Assert - This was the core issue from #5
+        concrete.Should().NotBeNull();
+        abstraction.Should().NotBeNull();
+        ReferenceEquals(concrete, abstraction).Should().BeTrue();
     }
 }
