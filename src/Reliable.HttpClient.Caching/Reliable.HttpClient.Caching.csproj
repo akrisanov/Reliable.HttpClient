@@ -4,48 +4,51 @@
     Directory.Build.props -->
     <AssemblyName>Reliable.HttpClient.Caching</AssemblyName>
     <PackageId>Reliable.HttpClient.Caching</PackageId>
-    <Version>1.3.0</Version>
-    <PackageReleaseNotes>🎉 v1.3.0 Release - PATCH Method Support &amp; Enhanced Caching!
+    <Version>1.4.0</Version>
+    <PackageReleaseNotes>🎉 v1.4.0 Release - Dependency Injection Enhancement; Backward
+      Compatibility!
 
-      ✨ Major New Features:
+      Major Bug Fix:
+
+      • Fixed HttpClientWithCache concrete type resolution from Dependency Injection container
+      (Issue #5)
+      • Both IHttpClientWithCache interface and HttpClientWithCache concrete type now resolvable
+      from DI
+      • Maintains complete backward compatibility with existing API signatures
+      • Scoped service registration to avoid captive dependencies with internal HttpClient
+
+      API Enhancements:
+
+      • AddHttpClientWithCache now supports both HttpCacheOptions and
+      Action&lt;HttpCacheOptions&gt;patterns
+      • Dual registration: services.GetService&lt;HttpClientWithCache&gt;() and
+      services.GetService&lt;IHttpClientWithCache&gt;() both work
+      • Same singleton instance returned for both interface and concrete type requests
+      • Comprehensive test coverage ensuring proper DI resolution behavior
+
+      Backward Compatible Overloads:
+
+      // Original API - preserved for backward compatibility
+      services.AddHttpClientWithCache("client", cacheOptions);
+
+      // New API - Action&lt;T&gt; configuration pattern
+      services.AddHttpClientWithCache("client", options =&gt; options.DefaultExpiry =
+      TimeSpan.FromMinutes(5));
+
+      Key Benefits:
+
+      • Access to HttpClientWithCache-specific members not exposed through IHttpClientWithCache
+      • Better integration with existing DI-based architectures
+      • Follows .NET dependency injection best practices
+      • Maintains performance and simplicity for basic scenarios
+
+      Previous Features (v1.3.0):
+
       • Complete HTTP PATCH method support in HttpClientWithCache and CachedHttpClient&lt;T&gt;
-      • Four PATCH method overloads matching main HttpClient module capabilities
-      • Intelligent cache invalidation for PATCH operations - responses not cached, but related
-      cache entries invalidated
-      • Full header support for PATCH operations including OAuth and authentication scenarios
-      • Smart error handling - cache remains intact if PATCH operation fails
-
-      🔧 API Enhancements:
-      • PatchAsync&lt;TRequest, TResponse&gt;(uri, request) - Typed request/response with cache
-      invalidation
-      • PatchAsync&lt;TRequest, TResponse&gt;(uri, request, headers) - With custom headers support
-      • PatchAsync&lt;TRequest&gt;(uri, request) - Returns raw HttpResponseMessage
-      • PatchAsync&lt;TRequest&gt;(uri, request, headers) - Raw response with headers
-      • Consistent caching behavior: GET operations cached, mutating operations (POST, PUT, PATCH)
-      invalidate cache
-      • Comprehensive test coverage (336+ tests) validating all PATCH scenarios
-
-      🎯 Key Use Cases:
-      • RESTful API updates with intelligent cache management
-      • Partial resource updates with cache invalidation patterns
-      • Authentication-aware PATCH operations with header support
-      • Multi-tenant PATCH operations with isolated cache invalidation
-      • Error-resilient updates that preserve cache integrity on failures
-
-      🚀 Quick Start:
-      // PATCH with automatic cache invalidation
-      var updated = await client.PatchAsync&lt;UpdateRequest, UserResponse&gt;("/users/123",
-      request);
-
-      // PATCH with headers and cache management
-      await client.PatchAsync("/api/resource", data, headers);
-
-      🔄 Previous Features (v1.2.0):
+      • Intelligent cache invalidation for PATCH operations
       • Full custom headers support matching main HttpClient module capabilities
-      • DefaultHeaders property in HttpCacheOptions for static headers across all cached requests
-      • Per-request headers support in all HTTP methods (GET, POST, PUT, DELETE)
+      • Per-request headers support in all HTTP methods (GET, POST, PUT, DELETE, PATCH)
       • Intelligent cache key generation that includes headers for proper cache isolation
-      • Enhanced HttpClientWithCache with comprehensive header support
 
       📚 Full documentation: https://github.com/akrisanov/Reliable.HttpClient
 

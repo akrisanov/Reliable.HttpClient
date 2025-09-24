@@ -67,7 +67,7 @@ using Reliable.HttpClient.Caching;
 // Register universal caching
 services.AddHttpClientWithCache();
 
-// Use in your service
+// Use in your service - via interface
 public class ApiService(IHttpClientWithCache client)
 {
     public async Task<WeatherResponse> GetWeatherAsync(string city) =>
@@ -75,6 +75,13 @@ public class ApiService(IHttpClientWithCache client)
 
     public async Task<UserProfile> GetUserAsync(int id) =>
         await client.GetAsync<UserProfile>($"/users/{id}");
+}
+
+// Alternative: Use concrete type (since v1.4.0)
+public class AlternativeApiService(HttpClientWithCache client)
+{
+    public async Task<WeatherResponse> GetWeatherAsync(string city) =>
+        await client.GetAsync<WeatherResponse>($"/weather?city={city}");
 }
 ```
 

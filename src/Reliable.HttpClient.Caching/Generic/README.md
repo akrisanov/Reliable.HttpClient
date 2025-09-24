@@ -38,6 +38,6 @@ public class WeatherService(CachedHttpClient<WeatherResponse> client)
 
 ## Documentation
 
-📖 **[Complete Caching Guide](../../docs/caching.md)** - Architecture, examples, and advanced usage  
-🎯 **[Choosing the Right Approach](../../docs/choosing-approach.md)** - Decision guide  
+📖 **[Complete Caching Guide](../../docs/caching.md)** - Architecture, examples, and advanced usage
+🎯 **[Choosing the Right Approach](../../docs/choosing-approach.md)** - Decision guide
 📝 **[Common Scenarios](../../docs/examples/common-scenarios.md)** - Real-world examples
